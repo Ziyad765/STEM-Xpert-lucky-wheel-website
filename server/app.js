@@ -241,6 +241,21 @@ app.get('/api/network-info', (req, res) => {
   });
 });
 
+app.get('/api/participant/:id', async (req, res) => {
+  await ensureDB();
+  try {
+    const { id } = req.params;
+    const all = await getAllParticipants();
+    const p = all.find(item => String(item._id) === String(id));
+    if (!p) {
+      return res.status(404).json({ error: 'Participant not found' });
+    }
+    res.json({ participant: p });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/status', async (req, res) => {
   await ensureDB();
   const active = await getActiveParticipant();

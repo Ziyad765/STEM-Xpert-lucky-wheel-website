@@ -136,18 +136,19 @@ export function isMongoConnected() {
 }
 
 // ----------------- Stale Timeout & Self-Healing -----------------
-export async function cleanupStaleActive(timeoutMinutes = 3) {
+export async function cleanupStaleActive(timeoutMinutes = 2) {
   const threshold = new Date(Date.now() - timeoutMinutes * 60 * 1000);
 
   if (isConnectedToMongo && MongoParticipant) {
-    // If active for > 3 mins without spinning, move to cancelled
+    // If active for > 2 mins without spinning, move to cancelled
     await MongoParticipant.updateMany(
       { 
         status: 'active', 
         spunAt: null, 
         $or: [
           { activatedAt: { $lt: threshold } },
-          { activatedAt: null, registeredAt: { $lt: threshold } }
+          { activatedAt: null, registeredAt: { $lt: threshold } },
+          { activatedAt: null, registeredAt: null }
         ]
       },
       { status: 'cancelled' }
@@ -155,7 +156,7 @@ export async function cleanupStaleActive(timeoutMinutes = 3) {
   } else {
     localParticipants.forEach(p => {
       if (p.status === 'active' && !p.spunAt) {
-        const checkTime = new Date(p.activatedAt || p.registeredAt);
+        const checkTime = new Date(p.activatedAt || p.registeredAt || 0);
         if (checkTime < threshold) {
           p.status = 'cancelled';
         }
@@ -167,21 +168,28 @@ export async function cleanupStaleActive(timeoutMinutes = 3) {
 
 // ----------------- Unified DB API -----------------
 
-export async function findParticipantByPhoneOrEmail(phone, email) {
+export async function findParticipantByPhoneOrEmail(phone, email, name = '') {
   const cleanPhone = phone?.trim().replace(/\D/g, '');
   const cleanEmail = email?.trim().toLowerCase();
 
   if (isConnectedToMongo && MongoParticipant) {
-    return await MongoParticipant.findOne({
+    // Only block if a participant with this phone or email is CURRENTLY in line (active or waiting)
+    // If they already completed a previous spin, allow them to register and spin again!
+    const pending = await MongoParticipant.findOne({
       $or: [
         { phone: cleanPhone },
         { email: cleanEmail }
-      ]
+      ],
+      status: { $in: ['active', 'waiting'] }
     });
+
+    return pending || null;
   } else {
-    return localParticipants.find(p => 
-      p.phone === cleanPhone || p.email.toLowerCase() === cleanEmail
+    const pending = localParticipants.find(p => 
+      (p.phone === cleanPhone || p.email.toLowerCase() === cleanEmail) &&
+      (p.status === 'active' || p.status === 'waiting')
     );
+    return pending || null;
   }
 }
 
@@ -192,7 +200,7 @@ export async function registerParticipant(data) {
   const cleanPhone = data.phone?.trim().replace(/\D/g, '');
   const cleanEmail = data.email?.trim().toLowerCase();
 
-  const existing = await findParticipantByPhoneOrEmail(cleanPhone, cleanEmail);
+  const existing = await findParticipantByPhoneOrEmail(cleanPhone, cleanEmail, data.name);
   if (existing) {
     return {
       success: false,

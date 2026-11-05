@@ -8,7 +8,8 @@ import {
   ArrowRight, 
   ShieldCheck,
   ExternalLink,
-  RefreshCw
+  RotateCcw,
+  UserPlus
 } from 'lucide-react';
 
 export default function MobileRegister({ socket }) {
@@ -28,12 +29,41 @@ export default function MobileRegister({ socket }) {
   const [isSpinningServer, setIsSpinningServer] = useState(false);
   const [activating, setActivating] = useState(false);
 
-  // Restore previous registration from localStorage
+  // Restore previous registration from localStorage & verify live status with DB
   useEffect(() => {
     try {
       const saved = localStorage.getItem('stem_xpert_didac_reg');
       if (saved) {
-        setMyRegistration(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        setMyRegistration(parsed);
+
+        // Fetch live state from server
+        if (parsed._id) {
+          fetch(`/api/participant/${parsed._id}`)
+            .then(res => {
+              if (res.status === 404) {
+                // If not found in DB at all (e.g. database cleared), wipe stale session
+                localStorage.removeItem('stem_xpert_didac_reg');
+                setMyRegistration(null);
+                return null;
+              }
+              return res.json();
+            })
+            .then(data => {
+              if (!data) return;
+              if (data.participant) {
+                if (data.participant.status === 'cancelled') {
+                  // Stale/cancelled session -> clear so fresh form appears
+                  localStorage.removeItem('stem_xpert_didac_reg');
+                  setMyRegistration(null);
+                } else {
+                  setMyRegistration(data.participant);
+                  localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(data.participant));
+                }
+              }
+            })
+            .catch(() => {});
+        }
       }
     } catch (e) {}
   }, []);
@@ -100,11 +130,35 @@ export default function MobileRegister({ socket }) {
           const phoneMatch = data.active?.phone && data.active.phone === myRegistration.phone;
 
           if (activeId === myId || phoneMatch) {
-            setMyRegistration(prev => ({ ...prev, status: 'active', queuePosition: 0 }));
+            const updated = { ...myRegistration, ...(data.active || {}), status: 'active', queuePosition: 0 };
+            setMyRegistration(updated);
+            localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(updated));
           } else {
             const inQueue = (data.queue || []).find(q => String(q._id) === myId || q.phone === myRegistration.phone);
             if (inQueue) {
-              setMyRegistration(prev => ({ ...prev, status: 'waiting', queuePosition: inQueue.queuePosition }));
+              const updated = { ...myRegistration, ...inQueue, status: 'waiting', queuePosition: inQueue.queuePosition };
+              setMyRegistration(updated);
+              localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(updated));
+            } else if (myRegistration.status !== 'completed') {
+              // Participant is neither in active nor queue -> verify if finished spinning or cancelled
+              try {
+                const pRes = await fetch(`/api/participant/${myId}`);
+                if (pRes.ok) {
+                  const pData = await pRes.json();
+                  if (pData.participant) {
+                    if (pData.participant.status === 'completed') {
+                      setMyRegistration(pData.participant);
+                      localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(pData.participant));
+                    } else if (pData.participant.status === 'cancelled') {
+                      localStorage.removeItem('stem_xpert_didac_reg');
+                      setMyRegistration(null);
+                    }
+                  }
+                } else if (pRes.status === 404) {
+                  localStorage.removeItem('stem_xpert_didac_reg');
+                  setMyRegistration(null);
+                }
+              } catch (e) {}
             }
           }
         }
@@ -176,6 +230,20 @@ export default function MobileRegister({ socket }) {
     }
   };
 
+  // Clear session to register another student
+  const handleClearSession = () => {
+    localStorage.removeItem('stem_xpert_didac_reg');
+    setMyRegistration(null);
+    setFormData({
+      name: '',
+      phone: '',
+      email: '',
+      school: '',
+      grade: 'Grade 6 - 8',
+      interest: 'Robotics & AI'
+    });
+  };
+
   // Remote trigger spin
   const handleRemoteSpin = async () => {
     setIsSpinningServer(true);
@@ -225,9 +293,19 @@ export default function MobileRegister({ socket }) {
         <div className="bg-white px-3 py-1.5 rounded-xl border border-slate-200">
           <img src="/logo.png" alt="STEM Xpert" className="h-7 object-contain" />
         </div>
-        <div className="text-right">
+        <div className="flex items-center gap-2">
+          {myRegistration && (
+            <button
+              onClick={handleClearSession}
+              className="px-2.5 py-1 rounded-lg bg-brand-card hover:bg-brand-border text-brand-amber hover:text-white border border-brand-amber/40 text-[11px] font-bold flex items-center gap-1 transition-all"
+              title="Start fresh or spin again"
+            >
+              <RotateCcw className="w-3 h-3 text-brand-orange" />
+              <span>New Spin</span>
+            </button>
+          )}
           <span className="px-2 py-0.5 rounded bg-brand-orange/20 border border-brand-orange/40 text-brand-orange font-bold text-[10px] uppercase">
-            DIDAC INDIA 2026
+            DIDAC 2026
           </span>
         </div>
       </header>
@@ -274,7 +352,7 @@ export default function MobileRegister({ socket }) {
               <span>Confirmation recorded for {myRegistration.email}</span>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <a
                 href="https://academy.stem-xpert.com/in/home"
                 target="_blank"
@@ -286,13 +364,11 @@ export default function MobileRegister({ socket }) {
               </a>
 
               <button
-                onClick={() => {
-                  localStorage.removeItem('stem_xpert_didac_reg');
-                  setMyRegistration(null);
-                }}
-                className="w-full py-2.5 text-xs text-slate-400 hover:text-white"
+                onClick={handleClearSession}
+                className="w-full py-2.5 px-4 rounded-xl bg-brand-navy border border-brand-border hover:bg-brand-border text-slate-300 hover:text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors"
               >
-                Register another student
+                <UserPlus className="w-3.5 h-3.5 text-brand-amber" />
+                <span>Register Another Student</span>
               </button>
             </div>
           </div>
@@ -328,6 +404,14 @@ export default function MobileRegister({ socket }) {
               <span className="text-2xl">⚡</span>
               <span>{isSpinningServer ? 'WHEEL IS SPINNING...' : 'TAP TO SPIN BOOTH WHEEL NOW!'}</span>
             </button>
+
+            <button
+              onClick={handleClearSession}
+              className="mt-4 text-[11px] text-slate-400 hover:text-white flex items-center justify-center gap-1 mx-auto"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Cancel or Register Another Student</span>
+            </button>
           </div>
         )}
 
@@ -358,7 +442,7 @@ export default function MobileRegister({ socket }) {
               </p>
             </div>
 
-            {/* Interactive Action Button for the Student */}
+            {/* Action button to immediately activate turn if ready */}
             <button
               onClick={handleActivateTurn}
               disabled={activating}
@@ -371,6 +455,14 @@ export default function MobileRegister({ socket }) {
             <div className="text-xs text-slate-400 bg-brand-dark/50 p-3 rounded-xl border border-brand-border/40">
               💡 Tap above or watch the big screen — when your name is called, your spin button will unlock automatically!
             </div>
+
+            <button
+              onClick={handleClearSession}
+              className="w-full mt-4 py-2 text-xs text-slate-400 hover:text-white flex items-center justify-center gap-1.5 transition-colors underline underline-offset-4"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Register Another Student / Clear</span>
+            </button>
           </div>
         )}
 

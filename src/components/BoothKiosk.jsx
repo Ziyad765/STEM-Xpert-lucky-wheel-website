@@ -125,8 +125,8 @@ export default function BoothKiosk({ socket }) {
     };
   }, [socket]);
 
-  // Mode: if student is active -> wheel stage; otherwise -> QR first
-  const isWheelMode = viewOverride === 'wheel' || (viewOverride === 'auto' && Boolean(activeStudent));
+  // Mode: if student is active OR in queue -> wheel stage; otherwise -> QR first
+  const isWheelMode = viewOverride === 'wheel' || (viewOverride === 'auto' && Boolean(activeStudent || queue.length > 0));
 
   // Trigger spin
   const handleSpinClick = async () => {
@@ -142,6 +142,8 @@ export default function BoothKiosk({ socket }) {
         if (nextData.nextStudent) {
           currentStudent = nextData.nextStudent;
           setActiveStudent(currentStudent);
+        } else {
+          currentStudent = queue[0];
         }
       }
 
@@ -390,33 +392,38 @@ export default function BoothKiosk({ socket }) {
             
             {/* Active Student Callout Header */}
             <div className="w-full max-w-2xl mb-3">
-              {activeStudent ? (
-                <div className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-brand-card via-brand-navy to-brand-card border-2 border-brand-orange shadow-xl flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-orange to-brand-amber text-white font-black text-lg flex items-center justify-center shrink-0 shadow-md">
-                      {activeStudent.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-center sm:justify-start gap-2">
-                        <span className="text-xs text-brand-amber uppercase tracking-wider font-extrabold">Ready to Spin</span>
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              {(activeStudent || queue.length > 0) ? (
+                (() => {
+                  const currentPerson = activeStudent || queue[0];
+                  return (
+                    <div className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-brand-card via-brand-navy to-brand-card border-2 border-brand-orange shadow-xl flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-orange to-brand-amber text-white font-black text-lg flex items-center justify-center shrink-0 shadow-md">
+                          {currentPerson.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-center sm:justify-start gap-2">
+                            <span className="text-xs text-brand-amber uppercase tracking-wider font-extrabold">Ready to Spin</span>
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                          </div>
+                          <h2 className="text-lg sm:text-xl font-black text-white capitalize">
+                            {currentPerson.name}
+                          </h2>
+                          <div className="text-xs text-slate-300">
+                            {currentPerson.school} • <span className="text-brand-amber font-semibold">{currentPerson.interest}</span>
+                          </div>
+                        </div>
                       </div>
-                      <h2 className="text-lg sm:text-xl font-black text-white capitalize">
-                        {activeStudent.name}
-                      </h2>
-                      <div className="text-xs text-slate-300">
-                        {activeStudent.school} • <span className="text-brand-amber font-semibold">{activeStudent.interest}</span>
-                      </div>
-                    </div>
-                  </div>
 
-                  <button
-                    onClick={() => setViewOverride('qr')}
-                    className="text-xs text-slate-400 hover:text-white px-3 py-1.5 rounded-lg bg-brand-dark/60 border border-brand-border shrink-0"
-                  >
-                    ← Back to QR
-                  </button>
-                </div>
+                      <button
+                        onClick={() => setViewOverride('qr')}
+                        className="text-xs text-slate-400 hover:text-white px-3 py-1.5 rounded-lg bg-brand-dark/60 border border-brand-border shrink-0"
+                      >
+                        ← Back to QR
+                      </button>
+                    </div>
+                  );
+                })()
               ) : (
                 <div className="p-3 rounded-2xl bg-brand-card border border-brand-border flex items-center justify-between text-xs text-slate-400">
                   <span>No student currently selected. Waiting for registrations!</span>
