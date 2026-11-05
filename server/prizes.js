@@ -1,0 +1,170 @@
+export const DEFAULT_PRIZES = [
+  {
+    id: 'p1',
+    label: 'Free Skill Trainer Certification Course',
+    shortLabel: 'Skill Trainer',
+    color: '#FF4612', // STEM-Xpert Red-Orange
+    textColor: '#FFFFFF',
+    icon: 'Award',
+    description: 'Full Access Scholarship to the STEM-Xpert Skill Trainer Certification Course.',
+    voucherPrefix: 'TRAINER',
+    weight: 35,
+    stock: 9999,
+    isPhysical: false,
+    isLoss: false
+  },
+  {
+    id: 'p2',
+    label: 'Better Luck Next Time',
+    shortLabel: 'Better Luck',
+    color: '#334155', // Muted Slate
+    textColor: '#94A3B8',
+    icon: 'RotateCcw',
+    description: 'Thank you for playing!',
+    voucherPrefix: 'TRYAGAIN',
+    weight: 0, // NEVER LANDS HERE!
+    stock: 0,
+    isPhysical: false,
+    isLoss: true
+  },
+  {
+    id: 'p3',
+    label: 'Free Virtual Robotics Lab',
+    shortLabel: 'Robotics Lab',
+    color: '#2563EB', // Royal Blue
+    textColor: '#FFFFFF',
+    icon: 'Bot',
+    description: 'Complimentary 1-Year License to the STEM-Xpert Interactive Virtual Robotics Lab.',
+    voucherPrefix: 'ROBO-LAB',
+    weight: 35,
+    stock: 9999,
+    isPhysical: false,
+    isLoss: false
+  },
+  {
+    id: 'p4',
+    label: 'Better Luck Next Time',
+    shortLabel: 'Better Luck',
+    color: '#1E293B', // Deep Slate
+    textColor: '#94A3B8',
+    icon: 'RotateCcw',
+    description: 'Thank you for playing!',
+    voucherPrefix: 'TRYAGAIN',
+    weight: 0, // NEVER LANDS HERE!
+    stock: 0,
+    isPhysical: false,
+    isLoss: true
+  },
+  {
+    id: 'p5',
+    label: 'AI for Teachers Course',
+    shortLabel: 'AI for Teachers',
+    color: '#FBA94B', // Warm Amber Gold
+    textColor: '#0B1120',
+    icon: 'Cpu',
+    description: 'Full Certification Course on Artificial Intelligence Tools & Curriculum for Teachers.',
+    voucherPrefix: 'AI-TEACH',
+    weight: 30,
+    stock: 9999,
+    isPhysical: false,
+    isLoss: false
+  },
+  {
+    id: 'p6',
+    label: 'Better Luck Next Time',
+    shortLabel: 'Better Luck',
+    color: '#334155', // Muted Slate
+    textColor: '#94A3B8',
+    icon: 'RotateCcw',
+    description: 'Thank you for playing!',
+    voucherPrefix: 'TRYAGAIN',
+    weight: 0, // NEVER LANDS HERE!
+    stock: 0,
+    isPhysical: false,
+    isLoss: true
+  },
+  {
+    id: 'p7',
+    label: 'Free Skill Trainer Certification Course',
+    shortLabel: 'Skill Trainer',
+    color: '#FF4612', // STEM-Xpert Red-Orange
+    textColor: '#FFFFFF',
+    icon: 'Award',
+    description: 'Full Access Scholarship to the STEM-Xpert Skill Trainer Certification Course.',
+    voucherPrefix: 'TRAINER',
+    weight: 35,
+    stock: 9999,
+    isPhysical: false,
+    isLoss: false
+  },
+  {
+    id: 'p8',
+    label: 'Better Luck Next Time',
+    shortLabel: 'Better Luck',
+    color: '#1E293B', // Deep Slate
+    textColor: '#94A3B8',
+    icon: 'RotateCcw',
+    description: 'Thank you for playing!',
+    voucherPrefix: 'TRYAGAIN',
+    weight: 0, // NEVER LANDS HERE!
+    stock: 0,
+    isPhysical: false,
+    isLoss: true
+  },
+  {
+    id: 'p9',
+    label: 'Free Virtual Robotics Lab',
+    shortLabel: 'Robotics Lab',
+    color: '#059669', // Emerald Green
+    textColor: '#FFFFFF',
+    icon: 'Bot',
+    description: 'Complimentary 1-Year License to the STEM-Xpert Interactive Virtual Robotics Lab.',
+    voucherPrefix: 'ROBO-LAB',
+    weight: 35,
+    stock: 9999,
+    isPhysical: false,
+    isLoss: false
+  },
+  {
+    id: 'p10',
+    label: 'Better Luck Next Time',
+    shortLabel: 'Better Luck',
+    color: '#334155', // Muted Slate
+    textColor: '#94A3B8',
+    icon: 'RotateCcw',
+    description: 'Thank you for playing!',
+    voucherPrefix: 'TRYAGAIN',
+    weight: 0, // NEVER LANDS HERE!
+    stock: 0,
+    isPhysical: false,
+    isLoss: true
+  },
+  {
+    id: 'p11',
+    label: 'AI for Teachers Course',
+    shortLabel: 'AI for Teachers',
+    color: '#7C3AED', // Premium Violet
+    textColor: '#FFFFFF',
+    icon: 'Cpu',
+    description: 'Full Certification Course on Artificial Intelligence Tools & Curriculum for Teachers.',
+    voucherPrefix: 'AI-TEACH',
+    weight: 30,
+    stock: 9999,
+    isPhysical: false,
+    isLoss: false
+  },
+  {
+    id: 'p12',
+    label: 'Better Luck Next Time',
+    shortLabel: 'Better Luck',
+    color: '#1E293B', // Deep Slate
+    textColor: '#94A3B8',
+    icon: 'RotateCcw',
+    description: 'Thank you for playing!',
+    voucherPrefix: 'TRYAGAIN',
+    weight: 0, // NEVER LANDS HERE!
+    stock: 0,
+    isPhysical: false,
+    isLoss: true
+  }
+];
