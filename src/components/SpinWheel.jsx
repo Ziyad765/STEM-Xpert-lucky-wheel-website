@@ -229,7 +229,7 @@ export default function SpinWheel({
   return (
     <div className="relative flex flex-col items-center justify-center">
       {/* Top Pointer */}
-      <div 
+      <div
         className="absolute -top-3 z-30 pointer-events-none transition-transform duration-75"
         style={{
           transform: `translateX(-50%) rotate(${pointerWobble}deg)`,
@@ -238,10 +238,10 @@ export default function SpinWheel({
         }}
       >
         <svg width="44" height="50" viewBox="0 0 48 54" fill="none">
-          <path 
-            d="M24 52L8 8C7 5 9 2 12 2H36C39 2 41 5 40 8L24 52Z" 
-            fill="url(#pointerGrad)" 
-            stroke="#0B1120" 
+          <path
+            d="M24 52L8 8C7 5 9 2 12 2H36C39 2 41 5 40 8L24 52Z"
+            fill="url(#pointerGrad)"
+            stroke="#0B1120"
             strokeWidth="2"
           />
           <circle cx="24" cy="14" r="5" fill="#FFFFFF" stroke="#0B1120" strokeWidth="1.5" />
