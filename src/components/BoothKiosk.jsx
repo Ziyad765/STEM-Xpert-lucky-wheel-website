@@ -476,12 +476,14 @@ export default function BoothKiosk({ socket }) {
                                   <button
                                     onClick={handleSpinClick}
                                     disabled={isSpinning || !activeStudent}
-                                          ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                                          : activeStudent
-                                            ? 'bg-gradient-to-r from-brand-orange via-orange-500 to-brand-amber text-white shadow-brand-orange/40 hover:brightness-110 border-2 border-white/40 animate-pulse'
-                                            : 'bg-brand-card border border-brand-border text-slate-500 cursor-not-allowed'
-                                        }`}
-              >
+                                    className={`w-full py-3.5 px-6 rounded-2xl font-black text-base sm:text-lg tracking-wider uppercase transition-all flex items-center justify-center gap-2.5 shadow-2xl active:scale-95 ${
+                                      isSpinning
+                                        ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                                        : activeStudent
+                                          ? 'bg-gradient-to-r from-brand-orange via-orange-500 to-brand-amber text-white shadow-brand-orange/40 hover:brightness-110 border-2 border-white/40 animate-pulse'
+                                          : 'bg-brand-card border border-brand-border text-slate-500 cursor-not-allowed'
+                                    }`}
+                                  >
                 <Sparkles className="w-5 h-5 text-amber-200" />
                 <span>
                   {isSpinning 
