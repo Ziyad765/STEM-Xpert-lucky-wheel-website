@@ -106,8 +106,13 @@ export default function BoothKiosk({ socket }) {
         if (data.prizes && data.prizes.length > 0) {
           setPrizes(data.prizes);
         }
+
+        // Auto-advance if idle and students are waiting in line
+        if (!data.active && data.queue && data.queue.length > 0 && !isSpinning) {
+          fetch('/api/queue/next', { method: 'POST' }).catch(() => {});
+        }
       } catch (err) {}
-    }, 1500);
+    }, 1200);
 
     return () => {
       clearInterval(pollInterval);
@@ -125,10 +130,26 @@ export default function BoothKiosk({ socket }) {
 
   // Trigger spin
   const handleSpinClick = async () => {
-    if (isSpinning || !activeStudent) return;
+    if (isSpinning) return;
     audio.init();
 
     try {
+      // If no active student currently but someone is waiting in queue, auto-activate them!
+      let currentStudent = activeStudent;
+      if (!currentStudent && queue.length > 0) {
+        const nextRes = await fetch('/api/queue/next', { method: 'POST' });
+        const nextData = await nextRes.json();
+        if (nextData.nextStudent) {
+          currentStudent = nextData.nextStudent;
+          setActiveStudent(currentStudent);
+        }
+      }
+
+      if (!currentStudent) {
+        alert('No registered student waiting. Please scan the QR code to register!');
+        return;
+      }
+
       const res = await fetch('/api/spin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -147,7 +168,7 @@ export default function BoothKiosk({ socket }) {
       setTimeout(async () => {
         setIsSpinning(false);
         setWinnerModalData({
-          participant: activeStudent,
+          participant: currentStudent,
           prize: data.prize,
           voucherCode: `STEM-${data.prize?.voucherPrefix || 'COURSE'}-${Math.floor(1000 + Math.random() * 9000)}`
         });
@@ -415,7 +436,7 @@ export default function BoothKiosk({ socket }) {
               isSpinning={isSpinning}
               targetAngle={targetAngle}
               duration={spinDuration}
-              canSpin={Boolean(activeStudent)}
+              canSpin={Boolean(activeStudent || queue.length > 0)}
               onSpinRequest={handleSpinClick}
             />
 
@@ -423,11 +444,11 @@ export default function BoothKiosk({ socket }) {
             <div className="mt-4 sm:mt-5 w-full max-w-sm flex flex-col items-center">
               <button
                 onClick={handleSpinClick}
-                disabled={isSpinning || !activeStudent}
+                disabled={isSpinning || (!activeStudent && queue.length === 0)}
                 className={`w-full py-3.5 px-6 rounded-2xl font-black text-base sm:text-lg tracking-wider uppercase transition-all flex items-center justify-center gap-2.5 shadow-2xl active:scale-95 ${
                   isSpinning
                     ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                    : activeStudent
+                    : (activeStudent || queue.length > 0)
                     ? 'bg-gradient-to-r from-brand-orange via-orange-500 to-brand-amber text-white shadow-brand-orange/40 hover:brightness-110 border-2 border-white/40 animate-pulse'
                     : 'bg-brand-card border border-brand-border text-slate-500 cursor-not-allowed'
                 }`}
@@ -438,7 +459,9 @@ export default function BoothKiosk({ socket }) {
                     ? 'SPINNING WITH SUSPENSE...' 
                     : activeStudent 
                     ? `SPIN FOR ${activeStudent.name.split(' ')[0].toUpperCase()}!` 
-                    : 'NO STUDENT IN LINE'}
+                    : queue.length > 0
+                    ? `SPIN FOR ${queue[0].name.split(' ')[0].toUpperCase()}!`
+                    : 'AWAITING REGISTRATION'}
                 </span>
               </button>
               <p className="text-[11px] text-slate-400 mt-2 text-center">

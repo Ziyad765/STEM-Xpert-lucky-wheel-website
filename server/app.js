@@ -11,6 +11,7 @@ import {
   registerParticipant,
   getActiveParticipant,
   getWaitingQueue,
+  ensureActiveOrPopQueue,
   popNextInQueue,
   completeCurrentParticipant,
   markEmailSent,
@@ -301,7 +302,8 @@ app.post('/api/register', async (req, res) => {
 app.get('/api/queue', async (req, res) => {
   await ensureDB();
   try {
-    const active = await getActiveParticipant();
+    // Auto-promote first in line if active is empty, and auto-clear stale idle participants
+    const active = await ensureActiveOrPopQueue();
     const queue = await getWaitingQueue();
     const prizes = await getPrizes();
     res.json({
@@ -313,6 +315,17 @@ app.get('/api/queue', async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch queue' });
+  }
+});
+
+app.post('/api/queue/activate-me', async (req, res) => {
+  await ensureDB();
+  try {
+    const active = await ensureActiveOrPopQueue();
+    await broadcastQueueState();
+    res.json({ success: true, active });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

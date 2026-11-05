@@ -36,7 +36,8 @@ const participantSchema = new mongoose.Schema({
   spunAt: { type: Date, default: null },
   emailSent: { type: Boolean, default: false },
   emailSentAt: { type: Date, default: null },
-  registeredAt: { type: Date, default: Date.now }
+  registeredAt: { type: Date, default: Date.now },
+  activatedAt: { type: Date, default: null }
 }, { timestamps: true });
 
 const prizeSchema = new mongoose.Schema({
@@ -113,11 +114,11 @@ export async function initDB() {
       serverSelectionTimeoutMS: 8000,
     });
     isConnectedToMongo = true;
-    MongoParticipant = mongoose.model('Participant', participantSchema);
-    MongoPrize = mongoose.model('Prize', prizeSchema);
+    MongoParticipant = mongoose.models.Participant || mongoose.model('Participant', participantSchema);
+    MongoPrize = mongoose.models.Prize || mongoose.model('Prize', prizeSchema);
     console.log('✅ Connected successfully to MongoDB Atlas!');
 
-    // Sync prizes collection with DEFAULT_PRIZES
+    // Sync prizes collection
     await MongoPrize.deleteMany({});
     await MongoPrize.insertMany(DEFAULT_PRIZES);
     console.log('📦 Synchronized course prizes with MongoDB Atlas.');
@@ -134,13 +135,43 @@ export function isMongoConnected() {
   return isConnectedToMongo;
 }
 
+// ----------------- Stale Timeout & Self-Healing -----------------
+export async function cleanupStaleActive(timeoutMinutes = 3) {
+  const threshold = new Date(Date.now() - timeoutMinutes * 60 * 1000);
+
+  if (isConnectedToMongo && MongoParticipant) {
+    // If active for > 3 mins without spinning, move to cancelled
+    await MongoParticipant.updateMany(
+      { 
+        status: 'active', 
+        spunAt: null, 
+        $or: [
+          { activatedAt: { $lt: threshold } },
+          { activatedAt: null, registeredAt: { $lt: threshold } }
+        ]
+      },
+      { status: 'cancelled' }
+    );
+  } else {
+    localParticipants.forEach(p => {
+      if (p.status === 'active' && !p.spunAt) {
+        const checkTime = new Date(p.activatedAt || p.registeredAt);
+        if (checkTime < threshold) {
+          p.status = 'cancelled';
+        }
+      }
+    });
+    saveLocalParticipants();
+  }
+}
+
 // ----------------- Unified DB API -----------------
 
 export async function findParticipantByPhoneOrEmail(phone, email) {
   const cleanPhone = phone?.trim().replace(/\D/g, '');
   const cleanEmail = email?.trim().toLowerCase();
 
-  if (isConnectedToMongo) {
+  if (isConnectedToMongo && MongoParticipant) {
     return await MongoParticipant.findOne({
       $or: [
         { phone: cleanPhone },
@@ -155,6 +186,9 @@ export async function findParticipantByPhoneOrEmail(phone, email) {
 }
 
 export async function registerParticipant(data) {
+  // First clean up any stale active students who never spun
+  await cleanupStaleActive(3);
+
   const cleanPhone = data.phone?.trim().replace(/\D/g, '');
   const cleanEmail = data.email?.trim().toLowerCase();
 
@@ -167,9 +201,11 @@ export async function registerParticipant(data) {
     };
   }
 
-  const currentQueue = await getWaitingQueue();
+  // Check if someone is already active
   const activePerson = await getActiveParticipant();
+  const currentQueue = await getWaitingQueue();
   
+  // If NO ONE is active, this student immediately becomes 'active'
   const shouldBeActive = !activePerson;
   const status = shouldBeActive ? 'active' : 'waiting';
   const queuePosition = shouldBeActive ? 0 : (currentQueue.length + 1);
@@ -189,10 +225,11 @@ export async function registerParticipant(data) {
     spunAt: null,
     emailSent: false,
     emailSentAt: null,
-    registeredAt: new Date()
+    registeredAt: new Date(),
+    activatedAt: shouldBeActive ? new Date() : null
   };
 
-  if (isConnectedToMongo) {
+  if (isConnectedToMongo && MongoParticipant) {
     const created = await MongoParticipant.create(newDoc);
     return { success: true, participant: created };
   } else {
@@ -203,7 +240,7 @@ export async function registerParticipant(data) {
 }
 
 export async function getActiveParticipant() {
-  if (isConnectedToMongo) {
+  if (isConnectedToMongo && MongoParticipant) {
     return await MongoParticipant.findOne({ status: 'active' });
   } else {
     return localParticipants.find(p => p.status === 'active') || null;
@@ -211,13 +248,27 @@ export async function getActiveParticipant() {
 }
 
 export async function getWaitingQueue() {
-  if (isConnectedToMongo) {
+  if (isConnectedToMongo && MongoParticipant) {
     return await MongoParticipant.find({ status: 'waiting' }).sort({ registeredAt: 1 });
   } else {
     return localParticipants
       .filter(p => p.status === 'waiting')
       .sort((a, b) => new Date(a.registeredAt) - new Date(b.registeredAt));
   }
+}
+
+// Auto-promote: If active is null but students are waiting, auto-promote the first student!
+export async function ensureActiveOrPopQueue() {
+  await cleanupStaleActive(3);
+
+  let active = await getActiveParticipant();
+  if (!active) {
+    const queue = await getWaitingQueue();
+    if (queue.length > 0) {
+      active = await popNextInQueue();
+    }
+  }
+  return active;
 }
 
 export async function popNextInQueue() {
@@ -227,13 +278,15 @@ export async function popNextInQueue() {
   }
 
   const nextPerson = queue[0];
-  const nextId = isConnectedToMongo ? nextPerson._id : nextPerson._id;
+  const nextId = nextPerson._id;
 
-  if (isConnectedToMongo) {
+  if (isConnectedToMongo && MongoParticipant) {
     nextPerson.status = 'active';
     nextPerson.queuePosition = 0;
+    nextPerson.activatedAt = new Date();
     await nextPerson.save();
 
+    // Re-index remaining queue positions
     const remaining = await MongoParticipant.find({ status: 'waiting' }).sort({ registeredAt: 1 });
     for (let i = 0; i < remaining.length; i++) {
       remaining[i].queuePosition = i + 1;
@@ -246,6 +299,7 @@ export async function popNextInQueue() {
     if (person) {
       person.status = 'active';
       person.queuePosition = 0;
+      person.activatedAt = new Date();
     }
 
     const remaining = localParticipants.filter(p => p.status === 'waiting');
@@ -260,7 +314,7 @@ export async function popNextInQueue() {
 }
 
 export async function completeCurrentParticipant(id, prize, voucherCode) {
-  if (isConnectedToMongo) {
+  if (isConnectedToMongo && MongoParticipant) {
     const p = await MongoParticipant.findById(id);
     if (p) {
       p.status = 'completed';
@@ -285,7 +339,7 @@ export async function completeCurrentParticipant(id, prize, voucherCode) {
 }
 
 export async function markEmailSent(id, success) {
-  if (isConnectedToMongo) {
+  if (isConnectedToMongo && MongoParticipant) {
     await MongoParticipant.findByIdAndUpdate(id, {
       emailSent: success,
       emailSentAt: new Date()
@@ -301,7 +355,7 @@ export async function markEmailSent(id, success) {
 }
 
 export async function getAllParticipants() {
-  if (isConnectedToMongo) {
+  if (isConnectedToMongo && MongoParticipant) {
     return await MongoParticipant.find().sort({ registeredAt: -1 });
   } else {
     return [...localParticipants].sort((a, b) => new Date(b.registeredAt) - new Date(a.registeredAt));
@@ -309,7 +363,7 @@ export async function getAllParticipants() {
 }
 
 export async function getPrizes() {
-  if (isConnectedToMongo) {
+  if (isConnectedToMongo && MongoPrize) {
     return await MongoPrize.find();
   } else {
     return localPrizes;
@@ -317,7 +371,7 @@ export async function getPrizes() {
 }
 
 export async function decrementPrizeStock(prizeId) {
-  if (isConnectedToMongo) {
+  if (isConnectedToMongo && MongoPrize) {
     const prize = await MongoPrize.findOne({ id: prizeId });
     if (prize && prize.stock > 0) {
       prize.stock -= 1;
@@ -336,7 +390,7 @@ export async function decrementPrizeStock(prizeId) {
 }
 
 export async function updatePrizeStock(prizeId, newStock) {
-  if (isConnectedToMongo) {
+  if (isConnectedToMongo && MongoPrize) {
     await MongoPrize.findOneAndUpdate({ id: prizeId }, { stock: newStock });
   } else {
     const prize = localPrizes.find(p => p.id === prizeId);
@@ -348,7 +402,7 @@ export async function updatePrizeStock(prizeId, newStock) {
 }
 
 export async function resetQueue() {
-  if (isConnectedToMongo) {
+  if (isConnectedToMongo && MongoParticipant) {
     await MongoParticipant.updateMany(
       { status: { $in: ['waiting', 'active'] } },
       { status: 'cancelled' }
@@ -364,13 +418,14 @@ export async function resetQueue() {
 }
 
 export async function reSpinParticipant(id) {
-  if (isConnectedToMongo) {
+  if (isConnectedToMongo && MongoParticipant) {
     const p = await MongoParticipant.findById(id);
     if (p) {
       p.status = 'active';
       p.prizeWon = null;
       p.voucherCode = null;
       p.spunAt = null;
+      p.activatedAt = new Date();
       await p.save();
       return p;
     }
@@ -381,6 +436,7 @@ export async function reSpinParticipant(id) {
       p.prizeWon = null;
       p.voucherCode = null;
       p.spunAt = null;
+      p.activatedAt = new Date();
       saveLocalParticipants();
       return p;
     }
