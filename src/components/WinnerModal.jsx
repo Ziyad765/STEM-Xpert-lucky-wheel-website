@@ -131,9 +131,9 @@ export default function WinnerModal({
             </div>
             <div className="text-right">
               <span className="inline-block px-2.5 py-0.5 rounded bg-brand-orange text-white text-[10px] font-black tracking-wider uppercase">
-                Booth #E-42
+                DIDAC INDIA 2026
               </span>
-              <div className="text-[10px] text-slate-400 mt-0.5">DIDAC India 2026 • Bangalore</div>
+              <div className="text-[10px] text-slate-400 mt-0.5">Bangalore (BIEC)</div>
             </div>
           </div>
 

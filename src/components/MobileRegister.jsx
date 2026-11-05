@@ -186,7 +186,7 @@ export default function MobileRegister({ socket }) {
           </div>
           <div className="text-right">
             <span className="px-2 py-0.5 rounded bg-brand-orange/20 border border-brand-orange/40 text-brand-orange font-bold text-[10px] uppercase">
-              DIDAC • Booth #E-42
+              DIDAC INDIA 2026
             </span>
           </div>
         </header>

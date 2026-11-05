@@ -28,8 +28,7 @@ export function initEmailTransporter() {
 export async function sendWinnerEmail({ participant, prize, voucherCode }) {
   const websiteUrl = process.env.WEBSITE_URL || 'https://www.stem-xpert.com/in/home';
   const academyUrl = process.env.ACADEMY_URL || 'https://academy.stem-xpert.com/in/home';
-  const eventName = process.env.EVENT_NAME || 'DIDAC India Bangalore 2026';
-  const boothNumber = process.env.BOOTH_NUMBER || 'Booth #E-42';
+  const eventName = process.env.EVENT_NAME || 'DIDAC India 2026';
 
   const htmlContent = `
 <!DOCTYPE html>
@@ -64,7 +63,7 @@ export async function sendWinnerEmail({ participant, prize, voucherCode }) {
   <div class="container">
     <div class="header">
       <div class="logo-text">⚡ STEM-Xpert</div>
-      <div class="event-badge">Live at ${eventName} | ${boothNumber}</div>
+      <div class="event-badge">Live at ${eventName}</div>
     </div>
     <div class="content">
       <div class="salutation">Congratulations, ${participant.name}! 🎉</div>
@@ -79,7 +78,7 @@ export async function sendWinnerEmail({ participant, prize, voucherCode }) {
       </div>
 
       <ul class="info-list">
-        <li><strong>Redemption:</strong> Show this email or voucher at our DIDAC booth (${boothNumber}) to claim your physical kit/swag, or apply the voucher code online.</li>
+        <li><strong>Redemption:</strong> Show this email or voucher at our DIDAC booth to claim your course / pass, or apply the voucher code online.</li>
         <li><strong>Student / School:</strong> ${participant.name} (${participant.school || 'Attendee'})</li>
         <li><strong>Interest:</strong> ${participant.interest}</li>
       </ul>

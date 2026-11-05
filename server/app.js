@@ -248,7 +248,6 @@ app.get('/api/status', async (req, res) => {
     status: 'ok',
     isMongo: isMongoConnected(),
     eventName: process.env.EVENT_NAME || 'DIDAC India 2026',
-    boothNumber: process.env.BOOTH_NUMBER || 'Booth #E-42',
     isSpinning,
     active,
     queueCount: queue.length
