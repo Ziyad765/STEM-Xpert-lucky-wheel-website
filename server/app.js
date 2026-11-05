@@ -47,6 +47,7 @@ async function ensureDB() {
 
 // Track in-memory spin state
 let isSpinning = false;
+let spinLockUntil = 0;
 let currentSpinData = null;
 let ioInstance = null;
 
@@ -123,7 +124,7 @@ export function calculateTargetAngle(prizeIndex, totalSlices = 12) {
 export async function executeSpin(requestedBy = 'booth') {
   await ensureDB();
 
-  if (isSpinning) {
+  if (Date.now() < spinLockUntil) {
     return { success: false, message: 'Wheel is already spinning!' };
   }
 
@@ -142,18 +143,41 @@ export async function executeSpin(requestedBy = 'booth') {
 
   const voucherCode = `STEM-${winningPrize.voucherPrefix || 'COURSE'}-${Math.floor(1000 + Math.random() * 9000)}`;
 
+  // Set spin lock
+  spinLockUntil = Date.now() + durationMs;
   isSpinning = true;
-  currentSpinData = {
-    participantId: active._id,
-    participantName: active.name,
+
+  // Synchronously update MongoDB so completion is guaranteed even if serverless freezes
+  await decrementPrizeStock(winningPrize.id);
+  const updatedParticipant = await completeCurrentParticipant(
+    active._id,
+    winningPrize,
+    voucherCode
+  );
+
+  const completedData = {
+    participant: updatedParticipant || active,
     prize: winningPrize,
-    prizeIndex: safeIndex,
+    voucherCode,
     targetAngle,
     durationMs,
-    voucherCode,
+    prizeIndex: safeIndex,
     requestedBy,
     startedAt: Date.now()
   };
+
+  currentSpinData = completedData;
+
+  // Background email send (doesn't block spin response)
+  sendWinnerEmail({
+    participant: updatedParticipant || active,
+    prize: winningPrize,
+    voucherCode
+  }).then(emailResult => {
+    markEmailSent(active._id, emailResult.success);
+  }).catch(err => {
+    console.error('Email send background error:', err);
+  });
 
   if (ioInstance) {
     ioInstance.emit('spin:started', {
@@ -162,46 +186,16 @@ export async function executeSpin(requestedBy = 'booth') {
       durationMs,
       prizeIndex: safeIndex
     });
+    setTimeout(() => {
+      isSpinning = false;
+      ioInstance.emit('spin:completed', completedData);
+      broadcastQueueState();
+    }, durationMs);
+  } else {
+    setTimeout(() => {
+      isSpinning = false;
+    }, durationMs);
   }
-
-  setTimeout(async () => {
-    try {
-      await decrementPrizeStock(winningPrize.id);
-
-      const updatedParticipant = await completeCurrentParticipant(
-        active._id,
-        winningPrize,
-        voucherCode
-      );
-
-      sendWinnerEmail({
-        participant: updatedParticipant || active,
-        prize: winningPrize,
-        voucherCode
-      }).then(emailResult => {
-        markEmailSent(active._id, emailResult.success);
-      }).catch(err => {
-        console.error('Email send background error:', err);
-      });
-
-      isSpinning = false;
-      const completedData = {
-        participant: updatedParticipant || active,
-        prize: winningPrize,
-        voucherCode
-      };
-      currentSpinData = null;
-
-      if (ioInstance) {
-        ioInstance.emit('spin:completed', completedData);
-      }
-      await broadcastQueueState();
-    } catch (err) {
-      console.error('Error in spin completion:', err);
-      isSpinning = false;
-      currentSpinData = null;
-    }
-  }, durationMs);
 
   return { 
     success: true, 
@@ -209,7 +203,9 @@ export async function executeSpin(requestedBy = 'booth') {
     targetAngle, 
     durationMs,
     prize: winningPrize,
-    prizeIndex: safeIndex
+    prizeIndex: safeIndex,
+    voucherCode,
+    participant: updatedParticipant || active
   };
 }
 
@@ -317,15 +313,22 @@ app.post('/api/register', async (req, res) => {
 app.get('/api/queue', async (req, res) => {
   await ensureDB();
   try {
-    // Auto-promote first in line if active is empty, and auto-clear stale idle participants
-    const active = await ensureActiveOrPopQueue();
+    const isCurrentlySpinning = Date.now() < spinLockUntil;
+
+    let active = null;
+    if (isCurrentlySpinning) {
+      active = currentSpinData?.participant || await getActiveParticipant();
+    } else {
+      active = await ensureActiveOrPopQueue();
+    }
+
     const queue = await getWaitingQueue();
     const prizes = await getPrizes();
     res.json({
       active,
       queue,
-      isSpinning,
-      currentSpinData,
+      isSpinning: isCurrentlySpinning,
+      currentSpinData: isCurrentlySpinning ? currentSpinData : null,
       prizes
     });
   } catch (err) {
