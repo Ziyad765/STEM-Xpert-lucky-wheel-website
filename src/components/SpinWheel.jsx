@@ -8,7 +8,8 @@ export default function SpinWheel({
   duration = 7500,
   onSpinEnd,
   canSpin = false,
-  onSpinRequest
+  onSpinRequest,
+  idleSpin = false
 }) {
   const canvasRef = useRef(null);
   const [currentRotation, setCurrentRotation] = useState(0);
@@ -184,6 +185,28 @@ export default function SpinWheel({
   useEffect(() => {
     drawWheel(currentRotation);
   }, [prizes, currentRotation]);
+
+  // Continuous Majestic Idle Rotation (Attract Mode for Exhibition)
+  useEffect(() => {
+    if (!idleSpin || isSpinning) return;
+
+    let animId = null;
+    let lastTimestamp = performance.now();
+
+    const idleLoop = (now) => {
+      const dt = now - lastTimestamp;
+      lastTimestamp = now;
+      // Smooth continuous ~22 deg/sec rotation
+      setCurrentRotation(prev => (prev + (dt * 0.022)) % 360);
+      animId = requestAnimationFrame(idleLoop);
+    };
+
+    animId = requestAnimationFrame(idleLoop);
+
+    return () => {
+      if (animId) cancelAnimationFrame(animId);
+    };
+  }, [idleSpin, isSpinning]);
 
   // Dramatic Near-Miss Animation Curve
   useEffect(() => {

@@ -16,6 +16,7 @@ import {
   completeCurrentParticipant,
   markEmailSent,
   getAllParticipants,
+  getParticipantById,
   getPrizes,
   decrementPrizeStock,
   updatePrizeStock,
@@ -241,8 +242,7 @@ app.get('/api/participant/:id', async (req, res) => {
   await ensureDB();
   try {
     const { id } = req.params;
-    const all = await getAllParticipants();
-    const p = all.find(item => String(item._id) === String(id));
+    const p = await getParticipantById(id);
     if (!p) {
       return res.status(404).json({ error: 'Participant not found' });
     }

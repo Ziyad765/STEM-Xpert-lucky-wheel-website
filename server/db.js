@@ -370,6 +370,22 @@ export async function getAllParticipants() {
   }
 }
 
+export async function getParticipantById(id) {
+  if (!id) return null;
+  if (isConnectedToMongo && MongoParticipant) {
+    try {
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        return await MongoParticipant.findById(id);
+      }
+      return await MongoParticipant.findOne({ _id: id });
+    } catch (e) {
+      return null;
+    }
+  } else {
+    return localParticipants.find(item => String(item._id) === String(id)) || null;
+  }
+}
+
 export async function getPrizes() {
   if (isConnectedToMongo && MongoPrize) {
     return await MongoPrize.find();
