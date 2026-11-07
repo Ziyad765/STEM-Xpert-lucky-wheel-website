@@ -99,12 +99,14 @@ export default function SpinWheel({
       ctx.rotate(textAngle);
       ctx.textAlign = 'right';
       ctx.fillStyle = prize.textColor || '#FFFFFF';
-      ctx.font = numSlices > 8 ? 'bold 12px Outfit, sans-serif' : 'bold 14px Outfit, sans-serif';
-      ctx.shadowColor = 'rgba(0,0,0,0.85)';
-      ctx.shadowBlur = 4;
+      ctx.font = numSlices > 8 ? 'bold 13px "Outfit", system-ui, sans-serif' : 'bold 15px "Outfit", system-ui, sans-serif';
+      ctx.shadowColor = 'rgba(0,0,0,0.9)';
+      ctx.shadowBlur = 6;
+      ctx.shadowOffsetX = 1;
+      ctx.shadowOffsetY = 1;
 
-      const label = prize.shortLabel || prize.label;
-      ctx.fillText(label, radius - 18, 4);
+      const label = (prize.shortLabel || prize.label || '').toUpperCase();
+      ctx.fillText(label, radius - 16, 4.5);
       ctx.restore();
     });
 
@@ -279,12 +281,12 @@ export default function SpinWheel({
       </div>
 
       {/* Canvas Wheel */}
-      <div className="relative p-2 rounded-full border border-brand-border/60 bg-gradient-to-b from-brand-card to-brand-navy shadow-2xl">
+      <div className="relative p-2 rounded-full border-2 border-brand-orange/40 bg-gradient-to-b from-brand-card to-brand-navy shadow-2xl">
         <canvas
           ref={canvasRef}
-          width={500}
-          height={500}
-          className="w-[280px] h-[280px] sm:w-[360px] sm:h-[360px] tablet:w-[420px] tablet:h-[420px] tablet-lg:w-[460px] tablet-lg:h-[460px] aspect-square select-none cursor-pointer"
+          width={540}
+          height={540}
+          className="w-[300px] h-[300px] sm:w-[380px] sm:h-[380px] tablet:w-[450px] tablet:h-[450px] tablet-lg:w-[490px] tablet-lg:h-[490px] aspect-square select-none cursor-pointer"
           onClick={() => {
             if (canSpin && !isSpinning && onSpinRequest) {
               onSpinRequest();

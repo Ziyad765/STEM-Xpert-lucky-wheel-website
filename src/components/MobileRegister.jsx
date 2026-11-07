@@ -38,13 +38,16 @@ export default function MobileRegister({ socket }) {
         setMyRegistration(parsed);
 
         // Fetch live state from server
-        if (parsed._id) {
-          fetch(`/api/participant/${parsed._id}`)
+        const lookupKey = parsed._id || parsed.phone;
+        if (lookupKey) {
+          fetch(`/api/participant/${encodeURIComponent(lookupKey)}`)
             .then(res => {
               if (res.status === 404) {
-                // If not found in DB at all (e.g. database cleared), wipe stale session
-                localStorage.removeItem('stem_xpert_didac_reg');
-                setMyRegistration(null);
+                // Only wipe if not completed yet (don't lose won prize)
+                if (parsed.status !== 'completed') {
+                  localStorage.removeItem('stem_xpert_didac_reg');
+                  setMyRegistration(null);
+                }
                 return null;
               }
               return res.json();
@@ -53,7 +56,6 @@ export default function MobileRegister({ socket }) {
               if (!data) return;
               if (data.participant) {
                 if (data.participant.status === 'cancelled') {
-                  // Stale/cancelled session -> clear so fresh form appears
                   localStorage.removeItem('stem_xpert_didac_reg');
                   setMyRegistration(null);
                 } else {
@@ -80,15 +82,15 @@ export default function MobileRegister({ socket }) {
         setQueueInfo({ active: data.active, queue: data.queue || [] });
         setIsSpinningServer(data.isSpinning || false);
 
-        if (myRegistration?._id) {
-          const myId = String(myRegistration._id);
+        if (myRegistration) {
+          const myId = myRegistration._id ? String(myRegistration._id) : null;
           const activeId = data.active?._id ? String(data.active._id) : null;
           const phoneMatch = data.active?.phone && data.active.phone === myRegistration.phone;
 
           if (activeId === myId || phoneMatch) {
             setMyRegistration(prev => ({ ...prev, status: 'active', queuePosition: 0 }));
           } else {
-            const inQueue = (data.queue || []).find(q => String(q._id) === myId || q.phone === myRegistration.phone);
+            const inQueue = (data.queue || []).find(q => (myId && String(q._id) === myId) || q.phone === myRegistration.phone);
             if (inQueue) {
               setMyRegistration(prev => ({ ...prev, status: 'waiting', queuePosition: inQueue.queuePosition }));
             }
@@ -97,12 +99,13 @@ export default function MobileRegister({ socket }) {
       });
 
       socket.on('spin:completed', (data) => {
-        const myId = String(myRegistration?._id);
+        const myId = myRegistration?._id ? String(myRegistration._id) : null;
         const winnerId = data.participant?._id ? String(data.participant._id) : null;
         const phoneMatch = data.participant?.phone && data.participant.phone === myRegistration?.phone;
 
-        if (winnerId === myId || phoneMatch) {
+        if ((winnerId && winnerId === myId) || phoneMatch) {
           const completedDoc = {
+            ...myRegistration,
             ...data.participant,
             status: 'completed',
             prizeWon: data.prize,
@@ -110,6 +113,7 @@ export default function MobileRegister({ socket }) {
           };
           setMyRegistration(completedDoc);
           localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(completedDoc));
+          setIsSpinningServer(false);
         }
       });
     }
@@ -124,13 +128,44 @@ export default function MobileRegister({ socket }) {
         setQueueInfo({ active: data.active, queue: data.queue || [] });
         setIsSpinningServer(data.isSpinning || false);
 
-        if (myRegistration?._id) {
-          const myId = String(myRegistration._id);
-          const activeId = data.active?._id ? String(data.active._id) : null;
-          const phoneMatch = data.active?.phone && data.active.phone === myRegistration.phone;
+        if (myRegistration) {
+          const myId = myRegistration._id ? String(myRegistration._id) : null;
+          const myPhone = myRegistration.phone;
 
-          if (activeId === myId || phoneMatch) {
-            // Check if active participant already has won a prize!
+          // 1. Check if current/recent spin on booth screen was for ME
+          const spinDoc = data.currentSpinData || data.lastCompletedSpin;
+          const spinPerson = spinDoc?.participant;
+          if (spinPerson) {
+            const isMe = 
+              (myId && String(spinPerson._id) === myId) ||
+              (myPhone && spinPerson.phone === myPhone) ||
+              (myRegistration.email && spinPerson.email?.toLowerCase() === myRegistration.email.toLowerCase());
+
+            if (isMe) {
+              if (data.isSpinning) {
+                setIsSpinningServer(true);
+              } else {
+                // Spin completed! Reveal prize and WhatsApp claim immediately!
+                const completedDoc = {
+                  ...myRegistration,
+                  ...spinPerson,
+                  status: 'completed',
+                  prizeWon: spinDoc.prize || spinPerson.prizeWon,
+                  voucherCode: spinDoc.voucherCode || spinPerson.voucherCode
+                };
+                setMyRegistration(completedDoc);
+                localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(completedDoc));
+                setIsSpinningServer(false);
+                return;
+              }
+            }
+          }
+
+          // 2. Check active & waiting status
+          const activeId = data.active?._id ? String(data.active._id) : null;
+          const phoneMatch = data.active?.phone && data.active.phone === myPhone;
+
+          if ((myId && activeId === myId) || phoneMatch) {
             if (data.active.status === 'completed' || data.active.prizeWon) {
               if (!data.isSpinning) {
                 const completedDoc = {
@@ -150,37 +185,37 @@ export default function MobileRegister({ socket }) {
               localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(updated));
             }
           } else {
-            const inQueue = (data.queue || []).find(q => String(q._id) === myId || q.phone === myRegistration.phone);
+            const inQueue = (data.queue || []).find(q => (myId && String(q._id) === myId) || (myPhone && q.phone === myPhone));
             if (inQueue) {
               const updated = { ...myRegistration, ...inQueue, status: 'waiting', queuePosition: inQueue.queuePosition };
               setMyRegistration(updated);
               localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(updated));
             } else if (myRegistration.status !== 'completed' || !myRegistration.prizeWon) {
-              // Participant is neither in active nor queue -> verify if finished spinning or cancelled
-              try {
-                const pRes = await fetch(`/api/participant/${myId}`);
-                if (pRes.ok) {
-                  const pData = await pRes.json();
-                  if (pData.participant) {
-                    if (pData.participant.status === 'completed' || pData.participant.prizeWon) {
-                      const completedDoc = {
-                        ...myRegistration,
-                        ...pData.participant,
-                        status: 'completed'
-                      };
-                      setMyRegistration(completedDoc);
-                      localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(completedDoc));
-                      setIsSpinningServer(false);
-                    } else if (pData.participant.status === 'cancelled') {
-                      localStorage.removeItem('stem_xpert_didac_reg');
-                      setMyRegistration(null);
+              // Check backend for completion status using ID or Phone
+              const lookupKey = myId || myPhone;
+              if (lookupKey) {
+                try {
+                  const pRes = await fetch(`/api/participant/${encodeURIComponent(lookupKey)}`);
+                  if (pRes.ok) {
+                    const pData = await pRes.json();
+                    if (pData.participant) {
+                      if (pData.participant.status === 'completed' || pData.participant.prizeWon) {
+                        const completedDoc = {
+                          ...myRegistration,
+                          ...pData.participant,
+                          status: 'completed'
+                        };
+                        setMyRegistration(completedDoc);
+                        localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(completedDoc));
+                        setIsSpinningServer(false);
+                      } else if (pData.participant.status === 'cancelled') {
+                        localStorage.removeItem('stem_xpert_didac_reg');
+                        setMyRegistration(null);
+                      }
                     }
                   }
-                } else if (pRes.status === 404) {
-                  localStorage.removeItem('stem_xpert_didac_reg');
-                  setMyRegistration(null);
-                }
-              } catch (e) {}
+                } catch (e) {}
+              }
             }
           }
         }

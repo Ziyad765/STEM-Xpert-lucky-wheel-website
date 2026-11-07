@@ -328,7 +328,8 @@ app.get('/api/queue', async (req, res) => {
       active,
       queue,
       isSpinning: isCurrentlySpinning,
-      currentSpinData: isCurrentlySpinning ? currentSpinData : null,
+      currentSpinData: currentSpinData || null,
+      lastCompletedSpin: currentSpinData || null,
       prizes
     });
   } catch (err) {

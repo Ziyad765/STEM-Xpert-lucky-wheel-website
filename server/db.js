@@ -372,17 +372,32 @@ export async function getAllParticipants() {
 
 export async function getParticipantById(id) {
   if (!id) return null;
+  const cleanId = String(id).trim();
   if (isConnectedToMongo && MongoParticipant) {
     try {
-      if (mongoose.Types.ObjectId.isValid(id)) {
-        return await MongoParticipant.findById(id);
+      if (mongoose.Types.ObjectId.isValid(cleanId)) {
+        const found = await MongoParticipant.findById(cleanId);
+        if (found) return found;
       }
-      return await MongoParticipant.findOne({ _id: id });
+      const cleanPhone = cleanId.replace(/\D/g, '');
+      const found = await MongoParticipant.findOne({
+        $or: [
+          { _id: cleanId },
+          ...(cleanPhone ? [{ phone: cleanPhone }] : []),
+          { email: cleanId.toLowerCase() }
+        ]
+      }).sort({ registeredAt: -1 });
+      return found || null;
     } catch (e) {
       return null;
     }
   } else {
-    return localParticipants.find(item => String(item._id) === String(id)) || null;
+    const cleanPhone = cleanId.replace(/\D/g, '');
+    return localParticipants.find(item => 
+      String(item._id) === cleanId || 
+      (cleanPhone && item.phone === cleanPhone) ||
+      item.email?.toLowerCase() === cleanId.toLowerCase()
+    ) || null;
   }
 }
 

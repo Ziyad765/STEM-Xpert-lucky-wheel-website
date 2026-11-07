@@ -331,8 +331,8 @@ export default function BoothKiosk({ socket }) {
         {/* CENTRAL STAGE: Wheel + Translucent Overlay */}
         <div className="relative flex items-center justify-center w-full my-1">
           
-          {/* THE LUCKY WHEEL: Always Mounted & Visible in Background */}
-          <div className={`transition-all duration-700 ${!isWheelMode ? 'opacity-85 filter drop-shadow-[0_0_50px_rgba(255,70,18,0.35)]' : 'opacity-100'}`}>
+          {/* THE REAL LUCKY WHEEL: Full Vibrant Stationary Display */}
+          <div className="transition-all duration-700 opacity-100 filter drop-shadow-[0_0_50px_rgba(255,70,18,0.25)]">
             <SpinWheel
               prizes={prizes}
               isSpinning={isSpinning}
@@ -340,91 +340,74 @@ export default function BoothKiosk({ socket }) {
               duration={spinDuration}
               canSpin={isWheelMode && Boolean(activeStudent || queue.length > 0)}
               onSpinRequest={handleSpinClick}
-              idleSpin={!isWheelMode && !isSpinning}
+              idleSpin={false}
             />
           </div>
 
-          {/* TRANSLUCENT QR OVERLAY (Floating directly on top of wheel during attract mode) */}
+          {/* TRANSLUCENT QR OVERLAY (Floating in center hub of stationary wheel with mild transparency) */}
           {!isWheelMode && (
-            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center animate-fadeIn p-2 sm:p-4">
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center animate-fadeIn p-2 pointer-events-none">
               
-              {/* Sleek Glassmorphism QR Card */}
-              <div className="w-full max-w-[340px] sm:max-w-[400px] backdrop-blur-xl bg-slate-950/80 border-2 border-brand-orange/90 rounded-3xl p-5 sm:p-6 text-center shadow-[0_0_60px_rgba(0,0,0,0.9)] relative overflow-hidden transition-all">
+              {/* Mildly Translucent QR Badge - compact so all outer slices, course names, and colors are 100% visible */}
+              <div className="pointer-events-auto max-w-[220px] sm:max-w-[245px] backdrop-blur-[1px] bg-slate-950/40 border border-brand-orange/70 rounded-3xl p-3 sm:p-3.5 text-center shadow-[0_0_40px_rgba(0,0,0,0.85)] relative transition-all flex flex-col items-center">
                 
-                {/* Neon Corner Tech Accents */}
-                <div className="absolute top-3 left-3 w-4 h-4 border-t-2 border-l-2 border-brand-amber" />
-                <div className="absolute top-3 right-3 w-4 h-4 border-t-2 border-r-2 border-brand-amber" />
-                <div className="absolute bottom-3 left-3 w-4 h-4 border-b-2 border-l-2 border-brand-amber" />
-                <div className="absolute bottom-3 right-3 w-4 h-4 border-b-2 border-r-2 border-brand-amber" />
+                {/* Tech Corner Accents */}
+                <div className="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-brand-amber" />
+                <div className="absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2 border-brand-amber" />
+                <div className="absolute bottom-2 left-2 w-3 h-3 border-b-2 border-l-2 border-brand-amber" />
+                <div className="absolute bottom-2 right-2 w-3 h-3 border-b-2 border-r-2 border-brand-amber" />
 
-                <div className="flex items-center justify-center gap-1.5 text-xs font-black text-brand-amber uppercase tracking-wider mb-2.5">
-                  <QrCode className="w-4 h-4 text-brand-orange" />
-                  <span>Scan to Spin This Wheel</span>
+                <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-brand-orange text-white text-[10px] font-black uppercase tracking-wider mb-2 shadow-md">
+                  <QrCode className="w-3 h-3 text-white" />
+                  <span>Scan to Spin</span>
                 </div>
 
                 {/* Crisp White QR Box */}
-                <div className="inline-block p-3.5 bg-white rounded-2xl shadow-2xl mx-auto border-4 border-brand-orange/30">
+                <div className="p-2 bg-white rounded-2xl shadow-2xl border-2 border-brand-orange/40">
                   <QRCodeSVG
                     value={registrationUrl || 'http://localhost:3000/register'}
-                    size={195}
-                    level="H"
+                    size={145}
+                    level="M"
                     includeMargin={false}
                   />
                 </div>
 
                 {/* Clean URL Indicator */}
-                <div className="mt-2.5 flex items-center justify-center gap-1 text-[11px] text-brand-amber font-mono font-bold tracking-tight">
+                <div className="mt-1.5 flex items-center justify-center gap-1 text-[10px] text-brand-amber font-mono font-bold tracking-tight">
                   {isEditingUrl ? (
-                    <div className="flex items-center gap-1 w-full max-w-xs">
+                    <div className="flex items-center gap-1 w-full max-w-[180px]">
                       <input
                         type="text"
                         value={customUrlInput}
                         onChange={(e) => setCustomUrlInput(e.target.value)}
-                        className="px-2 py-1 rounded bg-brand-dark border border-brand-amber text-xs text-white w-full outline-none"
+                        className="px-2 py-0.5 rounded bg-brand-dark border border-brand-amber text-[10px] text-white w-full outline-none"
                       />
                       <button
                         onClick={handleSaveCustomUrl}
                         className="p-1 rounded bg-brand-orange text-white"
                         title="Apply URL"
                       >
-                        <Check className="w-3.5 h-3.5" />
+                        <Check className="w-3 h-3" />
                       </button>
                     </div>
                   ) : (
                     <>
-                      <Wifi className="w-3 h-3 text-brand-orange shrink-0" />
-                      <span className="truncate max-w-[220px]">{registrationUrl}</span>
+                      <Wifi className="w-2.5 h-2.5 text-brand-orange shrink-0" />
+                      <span className="truncate max-w-[150px]">{registrationUrl}</span>
                       <button
                         onClick={() => setIsEditingUrl(true)}
                         className="text-slate-400 hover:text-white p-0.5"
                         title="Edit URL"
                       >
-                        <Edit2 className="w-3 h-3" />
+                        <Edit2 className="w-2.5 h-2.5" />
                       </button>
                     </>
                   )}
                 </div>
 
-                <p className="text-[11px] text-slate-200 mt-1.5 font-medium">
-                  ⚡ <strong>Scan & Register</strong> — this wheel will unlock for you live!
+                <p className="text-[10px] text-slate-100 mt-1 font-semibold drop-shadow">
+                  ⚡ Scan with camera to unlock wheel!
                 </p>
-
-                {/* 3 Step Pill Instructions */}
-                <div className="mt-3 pt-2.5 border-t border-brand-border/60 grid grid-cols-3 gap-1.5 text-center text-[10px] text-slate-300">
-                  <div className="bg-brand-dark/80 p-1.5 rounded-xl border border-brand-border">
-                    <div className="text-brand-orange font-bold text-[11px]">1. SCAN</div>
-                    <div>With camera</div>
-                  </div>
-                  <div className="bg-brand-dark/80 p-1.5 rounded-xl border border-brand-border">
-                    <div className="text-brand-amber font-bold text-[11px]">2. REGISTER</div>
-                    <div>Name & School</div>
-                  </div>
-                  <div className="bg-brand-dark/80 p-1.5 rounded-xl border border-brand-border">
-                    <div className="text-emerald-400 font-bold text-[11px]">3. SPIN</div>
-                    <div>Win scholarship!</div>
-                  </div>
-                </div>
-
               </div>
             </div>
           )}
