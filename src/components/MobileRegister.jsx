@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Sparkles, 
-  CheckCircle, 
-  Clock, 
-  AlertCircle, 
-  Trophy, 
-  ArrowRight, 
+import {
+  Sparkles,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Trophy,
+  ArrowRight,
   ShieldCheck,
   ExternalLink,
   RotateCcw,
@@ -64,10 +64,10 @@ export default function MobileRegister({ socket }) {
                 }
               }
             })
-            .catch(() => {});
+            .catch(() => { });
         }
       }
-    } catch (e) {}
+    } catch (e) { }
   }, []);
 
   // Poll & Socket Queue Sync
@@ -124,7 +124,7 @@ export default function MobileRegister({ socket }) {
         const res = await fetch('/api/queue');
         if (!res.ok) return;
         const data = await res.json();
-        
+
         setQueueInfo({ active: data.active, queue: data.queue || [] });
         setIsSpinningServer(data.isSpinning || false);
 
@@ -136,7 +136,7 @@ export default function MobileRegister({ socket }) {
           const spinDoc = data.currentSpinData || data.lastCompletedSpin;
           const spinPerson = spinDoc?.participant;
           if (spinPerson) {
-            const isMe = 
+            const isMe =
               (myId && String(spinPerson._id) === myId) ||
               (myPhone && spinPerson.phone === myPhone) ||
               (myRegistration.email && spinPerson.email?.toLowerCase() === myRegistration.email.toLowerCase());
@@ -214,12 +214,12 @@ export default function MobileRegister({ socket }) {
                       }
                     }
                   }
-                } catch (e) {}
+                } catch (e) { }
               }
             }
           }
         }
-      } catch (e) {}
+      } catch (e) { }
     }, 1200);
 
     return () => {
@@ -258,7 +258,7 @@ export default function MobileRegister({ socket }) {
 
       // If registered as waiting but no one is active, trigger immediate activation
       if (data.participant.status === 'waiting') {
-        fetch('/api/queue/activate-me', { method: 'POST' }).catch(() => {});
+        fetch('/api/queue/activate-me', { method: 'POST' }).catch(() => { });
       }
     } catch (err) {
       setError(err.message);
@@ -336,7 +336,7 @@ export default function MobileRegister({ socket }) {
 
   // Check if it's my turn
   const isMyTurn = myRegistration && (
-    myRegistration.status === 'active' || 
+    myRegistration.status === 'active' ||
     (queueInfo.active && String(queueInfo.active._id) === String(myRegistration._id)) ||
     (queueInfo.active?.phone && myRegistration.phone && queueInfo.active.phone === myRegistration.phone) ||
     (queueInfo.active?.email && myRegistration.email && queueInfo.active.email.toLowerCase() === myRegistration.email.toLowerCase())
@@ -353,15 +353,15 @@ export default function MobileRegister({ socket }) {
     const phone = myRegistration?.phone || '';
     const email = myRegistration?.email || '';
 
-    const text = 
-      `Hi STEM-Xpert Team! 👋\n\n` +
-      `I just won a scholarship course on the Lucky Wheel at your DIDAC India 2026 booth! 🎉\n\n` +
-      `👤 *Name:* ${studentName}\n` +
-      `🏫 *School/Org:* ${school}\n` +
-      `🏆 *Course Won:* ${prizeLabel}\n` +
-      `🎟️ *Voucher Code:* ${voucher}\n` +
-      `📱 *Phone:* ${phone}\n` +
-      `📧 *Email:* ${email}\n\n` +
+    const text =
+      `Hi STEM-Xpert Team! ` +
+      `I just won a scholarship course on the Lucky Wheel at your DIDAC India 2026 booth! ` +
+      ` *Name:* ${studentName} ` +
+      ` *School/Org:* ${school} ` +
+      ` *Course Won:* ${prizeLabel} ` +
+      ` *Voucher Code:* ${voucher} ` +
+      ` *Phone:* ${phone} ` +
+      ` *Email:* ${email} ` +
       `Please verify my voucher code and send me the course access instructions. Thank you!`;
 
     return `https://wa.me/${cleanNumber}?text=${encodeURIComponent(text)}`;
@@ -369,7 +369,7 @@ export default function MobileRegister({ socket }) {
 
   return (
     <div className="min-h-screen bg-brand-dark bg-cyber-grid text-slate-100 flex flex-col justify-between p-4 sm:p-6">
-      
+
       {/* Mobile Header with Official STEM Xpert & DIDAC SKILLS Logos */}
       <header className="max-w-md w-full mx-auto flex items-center justify-between pb-3 border-b border-brand-border/60">
         <div className="flex items-center gap-2">
@@ -400,7 +400,7 @@ export default function MobileRegister({ socket }) {
         {/* CASE 1: Student has won a scholarship prize */}
         {myRegistration?.status === 'completed' && (
           <div className="bg-gradient-to-b from-brand-card via-brand-dark to-brand-navy border-2 border-brand-orange rounded-3xl p-5 sm:p-6 text-center shadow-2xl relative overflow-hidden animate-fadeIn">
-            
+
             {/* Header with Official Logos: STEM-Xpert & DIDAC SKILLS */}
             <div className="flex items-center justify-between border-b border-brand-border/60 pb-2.5 mb-3">
               <div className="flex items-center gap-1.5">
@@ -438,7 +438,7 @@ export default function MobileRegister({ socket }) {
 
             {/* Official Voucher Ticket Card */}
             <div className="my-3.5 p-4 rounded-2xl bg-brand-dark/95 border-2 border-brand-border shadow-inner text-center relative">
-              
+
               {/* 100% Scholarship Voucher Badge */}
               <div className="inline-block px-3.5 py-1 rounded-xl bg-gradient-to-r from-brand-orange via-orange-500 to-brand-amber text-white font-black text-xs sm:text-sm tracking-wider uppercase mb-2 shadow-md">
                 100% SCHOLARSHIP VOUCHER
@@ -488,7 +488,7 @@ export default function MobileRegister({ socket }) {
                 className="w-full py-4 px-5 rounded-2xl bg-[#25D366] hover:bg-[#1EBE5D] active:scale-95 text-white font-black text-sm sm:text-base flex items-center justify-center gap-2.5 shadow-xl shadow-emerald-950/40 border border-white/40 transition-all animate-bounce"
               >
                 <svg className="w-5 h-5 fill-current shrink-0" viewBox="0 0 24 24">
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
                 </svg>
                 <span>CLAIM YOUR PRIZE ON WHATSAPP</span>
               </a>
@@ -526,7 +526,7 @@ export default function MobileRegister({ socket }) {
           <div className="space-y-3 animate-fadeIn">
             {/* Massive Glowing Robot Screen Callout Banner */}
             <div className="bg-gradient-to-b from-brand-orange/25 via-brand-card to-brand-navy border-2 border-brand-orange rounded-3xl p-5 text-center shadow-[0_0_50px_rgba(255,70,18,0.4)] relative overflow-hidden">
-              
+
               {/* Flashing Top Pulse Beacon */}
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border-2 border-emerald-400 text-emerald-300 text-xs font-black uppercase tracking-wider mb-2.5 shadow-md animate-pulse">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
@@ -664,7 +664,7 @@ export default function MobileRegister({ socket }) {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-3.5 text-left text-xs">
-              
+
               <div>
                 <label className="block text-slate-300 font-semibold mb-1">
                   Student / Attendee Name *
