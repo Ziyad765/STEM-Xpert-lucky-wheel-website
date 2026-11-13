@@ -142,7 +142,7 @@ export async function executeSpin(requestedBy = 'booth') {
   const targetAngle = calculateTargetAngle(safeIndex, prizes.length);
   const durationMs = 7500; // 7.5 seconds for dramatic near-miss suspense
 
-  const voucherCode = `STEM-${winningPrize.voucherPrefix || 'COURSE'}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const voucherCode = winningPrize.voucherCode || 'DIDAC100';
 
   // Set spin lock
   spinLockUntil = Date.now() + durationMs;

@@ -71,21 +71,21 @@ export async function sendWinnerEmail({ participant, prize, voucherCode }) {
 
       <div class="prize-box">
         <div class="prize-label">You Have Won</div>
-        <div class="prize-title">${prize.label}</div>
+        <div class="prize-title">${prize.label}${prize.worth ? ` — Worth ${prize.worth}` : ''}</div>
         <p class="prize-desc">${prize.description}</p>
-        <div style="font-size: 12px; color: #94A3B8; margin-bottom: 6px;">YOUR VOUCHER CODE</div>
+        <div style="font-size: 12px; color: #94A3B8; margin-bottom: 6px;">OFFICIAL VOUCHER CODE</div>
         <div class="voucher-pill">${voucherCode}</div>
       </div>
 
       <ul class="info-list">
-        <li><strong>Redemption:</strong> Show this email or voucher at our DIDAC booth to claim your course / pass, or apply the voucher code online.</li>
+        <li><strong>Redemption:</strong> Send this voucher code to STEM-Xpert on WhatsApp (+91 94004 51133) or claim online.</li>
         <li><strong>Student / School:</strong> ${participant.name} (${participant.school || 'Attendee'})</li>
         <li><strong>Interest:</strong> ${participant.interest}</li>
       </ul>
 
       <div style="margin-top: 24px;">
-        <a href="${academyUrl}" class="cta-btn" target="_blank">Explore Courses on Academy →</a>
-        <a href="${websiteUrl}" class="secondary-btn" target="_blank">Visit STEM-Xpert.com</a>
+        <a href="${prize.enrollUrl || academyUrl}" class="cta-btn" target="_blank">Enroll / Activate Course →</a>
+        <a href="https://wa.me/919400451133?text=${encodeURIComponent(`Hi STEM-Xpert! I won ${prize.label} (${voucherCode}). Please help me activate my course!`)}" class="secondary-btn" target="_blank">Claim on WhatsApp</a>
       </div>
     </div>
     <div class="footer">

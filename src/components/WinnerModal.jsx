@@ -124,57 +124,84 @@ export default function WinnerModal({
           <div className="absolute bottom-3 left-3 w-4 h-4 border-b-2 border-l-2 border-brand-amber" />
           <div className="absolute bottom-3 right-3 w-4 h-4 border-b-2 border-r-2 border-brand-amber" />
 
-          {/* Header with Official Logo */}
-          <div className="flex items-center justify-between border-b border-brand-border/60 pb-3 mb-4">
-            <div className="bg-white px-3 py-1 rounded-lg border border-slate-200">
-              <img src="/logo.png" alt="STEM Xpert" className="h-7 object-contain" />
+          {/* Header with Official Logos: STEM-Xpert & DIDAC SKILLS */}
+          <div className="flex items-center justify-between border-b border-brand-border/60 pb-2.5 mb-3">
+            <div className="flex items-center gap-2">
+              <div className="bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-sm">
+                <img src="/logo.png" alt="STEM Xpert" className="h-6 sm:h-7 object-contain" />
+              </div>
+              <div className="text-left hidden sm:block">
+                <div className="text-[10px] font-black text-white uppercase">STEM-Xpert</div>
+                <div className="text-[8px] text-brand-amber font-semibold">Nurturing Innovation</div>
+              </div>
             </div>
-            <div className="text-right">
-              <span className="inline-block px-2.5 py-0.5 rounded bg-brand-orange text-white text-[10px] font-black tracking-wider uppercase">
-                DIDAC INDIA 2026
-              </span>
-              <div className="text-[10px] text-slate-400 mt-0.5">Bangalore (BIEC)</div>
+
+            <div className="flex items-center gap-2">
+              <div className="text-right">
+                <div className="text-[9px] font-black text-brand-amber uppercase tracking-wider">25-27 NOV 2026</div>
+                <div className="text-[8px] text-slate-400">BIEC, Bengaluru</div>
+              </div>
+              <div className="bg-white px-2 py-1 rounded-lg border border-slate-200 shadow-sm">
+                <img src="/didac-skills-logo.png" alt="DIDAC SKILLS" className="h-6 sm:h-7 object-contain" />
+              </div>
             </div>
           </div>
 
+          {/* Visitor Voucher Banner */}
+          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-brand-orange/20 border border-brand-orange/50 text-brand-amber text-[10px] font-black tracking-widest uppercase mb-1">
+            <span>DIDAC SKILLS 2026 • VISITOR VOUCHER</span>
+          </div>
+
           {/* Winner Name */}
-          <div className="my-2">
-            <div className="text-[11px] uppercase tracking-widest text-slate-400 font-bold">
-              Congratulations!
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-black text-white mt-1 capitalize tracking-tight">
-              {participant?.name || 'Awesome Student'}
+          <div className="my-1.5">
+            <h2 className="text-xl sm:text-2xl font-black text-white capitalize tracking-tight">
+              {participant?.name || 'Winner'}
             </h2>
             {participant?.school && (
-              <div className="flex items-center justify-center gap-1.5 text-xs text-brand-amber mt-1">
-                <School className="w-3.5 h-3.5" />
+              <div className="flex items-center justify-center gap-1.5 text-xs text-brand-amber mt-0.5">
+                <School className="w-3 h-3" />
                 <span>{participant.school}</span>
               </div>
             )}
           </div>
 
           {/* Prize Banner Box */}
-          <div className="my-4 p-4 rounded-2xl bg-brand-dark/95 border border-brand-border shadow-inner">
-            <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-brand-gold uppercase tracking-wider">
-              <Trophy className="w-4 h-4 text-brand-gold" />
-              <span>You Have Won</span>
-            </div>
+          <div className="my-3 p-3.5 rounded-2xl bg-brand-dark/95 border border-brand-border shadow-inner text-center">
+            
+            {/* Voucher Worth Badge */}
+            {prize?.worth && (
+              <div className="inline-block px-3 py-1 rounded-xl bg-gradient-to-r from-brand-orange via-orange-500 to-brand-amber text-white font-black text-xs sm:text-sm tracking-wider uppercase mb-1.5 shadow-md">
+                VOUCHER WORTH: {prize.worth}
+              </div>
+            )}
+
             <div 
-              className="text-xl sm:text-2xl font-black mt-1 mb-1 tracking-tight"
+              className="text-lg sm:text-xl font-black mt-1 mb-1 tracking-tight"
               style={{ color: prize?.color || '#FF4612' }}
             >
               {prize?.label || 'STEM Award'}
             </div>
-            <p className="text-xs text-slate-300 max-w-sm mx-auto">
+            <p className="text-[11px] sm:text-xs text-slate-300 max-w-sm mx-auto">
               {prize?.description}
             </p>
 
-            {/* Voucher Code Box */}
-            <div className="mt-3.5 pt-3 border-t border-brand-border/40 flex flex-col sm:flex-row items-center justify-between gap-2">
-              <div className="text-left text-[11px] text-slate-400 font-medium">
-                OFFICIAL VOUCHER ID:
+            {/* Tags / Pills from Voucher */}
+            {prize?.tags && prize.tags.length > 0 && (
+              <div className="flex items-center justify-center gap-1.5 mt-2">
+                {prize.tags.map((tag, idx) => (
+                  <span key={idx} className="px-2 py-0.5 rounded-md bg-brand-card border border-brand-border text-[9px] text-slate-300 font-semibold">
+                    {tag}
+                  </span>
+                ))}
               </div>
-              <div className="px-3.5 py-1 rounded-lg bg-brand-card border border-brand-orange/60 font-mono text-sm sm:text-base font-bold text-white tracking-widest">
+            )}
+
+            {/* Voucher Code Box */}
+            <div className="mt-3 pt-2.5 border-t border-brand-border/40 flex flex-col sm:flex-row items-center justify-between gap-1.5">
+              <div className="text-left text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                VOUCHER CODE:
+              </div>
+              <div className="px-3 py-1 rounded-lg bg-brand-card border border-brand-orange/60 font-mono text-sm sm:text-base font-black text-brand-amber tracking-widest">
                 {voucherCode}
               </div>
             </div>

@@ -217,91 +217,116 @@ export default function BoothKiosk({ socket }) {
   };
 
   return (
-    <div className="min-h-screen bg-brand-dark bg-cyber-grid text-slate-100 flex flex-col justify-between select-none relative overflow-x-hidden">
+    <div className="h-screen h-[100dvh] max-h-screen bg-brand-dark bg-cyber-grid text-slate-100 flex flex-col justify-between select-none relative overflow-hidden">
       
-      {/* ---------------- Top Navbar: Clean & Professional ---------------- */}
-      <header className="px-5 py-3 border-b border-brand-border/60 bg-brand-navy/95 backdrop-blur-md flex items-center justify-between z-20 shadow-md">
+      {/* ---------------- Top Navbar: Clean & Compact with Both Logos ---------------- */}
+      <header className="px-4 py-2 border-b border-brand-border/60 bg-brand-navy/95 backdrop-blur-md flex items-center justify-between z-20 shadow-md shrink-0">
         
-        {/* Official Logo Banner */}
-        <div className="flex items-center gap-4">
-          <div className="bg-white px-3 py-1.5 rounded-xl shadow-sm border border-slate-200 flex items-center">
+        {/* Left: STEM-Xpert Logo */}
+        <div className="flex items-center gap-3">
+          <div className="bg-white px-2.5 py-1 rounded-xl shadow-sm border border-slate-200 flex items-center">
             <img 
               src="/logo.png" 
               alt="STEM Xpert Logo" 
-              className="h-8 sm:h-9 object-contain"
+              className="h-7 sm:h-8 object-contain"
             />
           </div>
-          <div>
-            <div className="text-xs sm:text-sm font-black text-white tracking-wide uppercase">
-              DIDAC INDIA 2026
+          <div className="hidden sm:block">
+            <div className="text-xs font-black text-white tracking-wide uppercase">
+              STEM-Xpert
             </div>
-            <p className="text-[11px] text-slate-400">
-              Bangalore International Exhibition Centre (BIEC)
+            <p className="text-[10px] text-brand-amber font-semibold">
+              Nurturing Innovation
             </p>
           </div>
         </div>
 
-        {/* Minimal Controls: Sound & Fullscreen */}
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={handleToggleSound}
-            className="p-2.5 rounded-xl bg-brand-card hover:bg-brand-border border border-brand-border text-slate-300 transition-colors"
-            title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
-          >
-            {isMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4 text-brand-amber" />}
-          </button>
+        {/* Right: DIDAC SKILLS Logo + Exhibition Info + Controls */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-white px-2.5 py-1 rounded-xl border border-slate-200 shadow-sm">
+            <img 
+              src="/didac-skills-logo.png" 
+              alt="DIDAC SKILLS" 
+              className="h-7 sm:h-8 object-contain"
+            />
+          </div>
 
-          <button
-            onClick={handleToggleFullscreen}
-            className="p-2.5 rounded-xl bg-brand-card hover:bg-brand-border border border-brand-border text-slate-300 transition-colors"
-            title="Toggle Kiosk Fullscreen"
-          >
-            {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
-          </button>
+          <div className="hidden md:block text-right">
+            <div className="text-[10px] font-black text-white uppercase tracking-wider">
+              25-27 NOV 2026
+            </div>
+            <p className="text-[9px] text-slate-400">
+              BIEC, Bengaluru
+            </p>
+          </div>
+
+          {/* Minimal Controls: Sound & Fullscreen */}
+          <div className="flex items-center gap-1.5 pl-2 border-l border-brand-border/70">
+            <button
+              onClick={handleToggleSound}
+              className="p-2 rounded-xl bg-brand-card hover:bg-brand-border border border-brand-border text-slate-300 transition-colors"
+              title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
+            >
+              {isMuted ? <VolumeX className="w-3.5 h-3.5 text-red-400" /> : <Volume2 className="w-3.5 h-3.5 text-brand-amber" />}
+            </button>
+
+            <button
+              onClick={handleToggleFullscreen}
+              className="p-2 rounded-xl bg-brand-card hover:bg-brand-border border border-brand-border text-slate-300 transition-colors"
+              title="Toggle Kiosk Fullscreen"
+            >
+              {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
+            </button>
+          </div>
         </div>
       </header>
 
-      {/* ---------------- MAIN STAGE: Wheel Centered with Translucent QR Overlay ---------------- */}
-      <main className="flex-1 w-full max-w-5xl mx-auto p-4 sm:p-6 flex flex-col justify-center items-center z-10 relative">
+      {/* ---------------- MAIN STAGE: Scaled for Zero-Scroll on Tablets ---------------- */}
+      <main className="flex-1 min-h-0 w-full max-w-5xl mx-auto px-3 py-1 flex flex-col justify-between items-center z-10 relative overflow-hidden">
 
-        {/* TOP CALLOUT BAR: Mode-Aware Header */}
+        {/* TOP CALLOUT BAR: Priority Writing for Scan & Spin */}
         {isWheelMode ? (
           /* Active Student Header when ready to spin */
-          <div className="w-full max-w-2xl mb-3 animate-fadeIn">
+          <div className="w-full max-w-xl my-1 shrink-0 animate-fadeIn">
             {(activeStudent || queue.length > 0) ? (
               (() => {
                 const currentPerson = activeStudent || queue[0];
                 return (
-                  <div className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-brand-card via-brand-navy to-brand-card border-2 border-brand-orange shadow-xl flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-orange to-brand-amber text-white font-black text-lg flex items-center justify-center shrink-0 shadow-md">
+                  <div className="p-2.5 sm:p-3 rounded-2xl bg-gradient-to-r from-brand-card via-brand-navy to-brand-card border-2 border-brand-orange shadow-xl flex items-center justify-between gap-3 text-left">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-brand-orange to-brand-amber text-white font-black text-base flex items-center justify-center shrink-0 shadow-md">
                         {currentPerson.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <div className="flex items-center justify-center sm:justify-start gap-2">
-                          <span className="text-xs text-brand-amber uppercase tracking-wider font-extrabold">Ready to Spin</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-brand-amber uppercase tracking-wider font-extrabold">Active Turn</span>
                           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                         </div>
-                        <h2 className="text-lg sm:text-xl font-black text-white capitalize">
+                        <h2 className="text-base sm:text-lg font-black text-white capitalize leading-tight">
                           {currentPerson.name}
                         </h2>
-                        <div className="text-xs text-slate-300">
+                        <div className="text-[11px] text-slate-300">
                           {currentPerson.school} • <span className="text-brand-amber font-semibold">{currentPerson.interest}</span>
                         </div>
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => setViewOverride('qr')}
-                      className="text-xs text-slate-400 hover:text-white px-3 py-1.5 rounded-lg bg-brand-dark/60 border border-brand-border shrink-0"
-                    >
-                      ← Back to QR
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="hidden sm:inline-block px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px] font-black uppercase tracking-wider animate-pulse">
+                        🤖 Tap Wheel to Spin!
+                      </span>
+                      <button
+                        onClick={() => setViewOverride('qr')}
+                        className="text-[11px] text-slate-400 hover:text-white px-2.5 py-1 rounded-lg bg-brand-dark/80 border border-brand-border"
+                      >
+                        ← Back to QR
+                      </button>
+                    </div>
                   </div>
                 );
               })()
             ) : (
-              <div className="p-3 rounded-2xl bg-brand-card border border-brand-border flex items-center justify-between text-xs text-slate-400">
+              <div className="p-2.5 rounded-2xl bg-brand-card border border-brand-border flex items-center justify-between text-xs text-slate-400">
                 <span>No student currently selected. Waiting for registrations!</span>
                 <button
                   onClick={() => setViewOverride('qr')}
@@ -313,26 +338,26 @@ export default function BoothKiosk({ socket }) {
             )}
           </div>
         ) : (
-          /* Attract Header when in QR Scan Mode */
-          <div className="w-full flex flex-col items-center justify-center animate-fadeIn mb-2 text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-brand-amber/15 to-brand-orange/15 border border-brand-orange/40 text-brand-amber text-xs font-bold uppercase tracking-wider mb-2">
-              <Sparkles className="w-3.5 h-3.5 text-brand-amber" />
-              <span>DIDAC Exclusive • 100% Guaranteed Course Scholarship</span>
+          /* Attract Header: Priority Writing for passersby to Scan & Spin */
+          <div className="w-full flex flex-col items-center justify-center animate-fadeIn text-center my-0.5 shrink-0">
+            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-gradient-to-r from-brand-amber/15 to-brand-orange/15 border border-brand-orange/40 text-brand-amber text-[10px] sm:text-[11px] font-black uppercase tracking-wider mb-1">
+              <Sparkles className="w-3 h-3 text-brand-amber animate-spin-slow" />
+              <span>DIDAC SKILLS 2026 • 100% GUARANTEED COURSE SCHOLARSHIP</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl tablet:text-4xl font-black text-white text-center tracking-tight max-w-2xl">
-              Scan to Register & Spin the <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-amber via-brand-orange to-red-500">STEM-Xpert</span> Wheel!
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300 text-center max-w-xl mt-1 mb-2">
-              Every participant wins a verified certification course or virtual robotics lab license!
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white text-center tracking-tight leading-tight max-w-2xl">
+              SCAN WITH PHONE & SPIN THE <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-amber via-brand-orange to-red-500">STEM-XPERT</span> WHEEL!
+            </h1>
+            <p className="text-[11px] sm:text-xs text-slate-300 text-center max-w-xl mt-0.5">
+              Scan the center QR code to unlock the wheel & win courses worth up to <strong className="text-brand-amber font-black">₹90,000</strong>!
             </p>
           </div>
         )}
 
         {/* CENTRAL STAGE: Wheel + Translucent Overlay */}
-        <div className="relative flex items-center justify-center w-full my-1">
+        <div className="relative flex-1 min-h-0 flex items-center justify-center w-full my-auto">
           
           {/* THE REAL LUCKY WHEEL: Full Vibrant Stationary Display */}
-          <div className="transition-all duration-700 opacity-100 filter drop-shadow-[0_0_50px_rgba(255,70,18,0.25)]">
+          <div className="transition-all duration-700 opacity-100 filter drop-shadow-[0_0_40px_rgba(255,70,18,0.25)] flex items-center justify-center">
             <SpinWheel
               prizes={prizes}
               isSpinning={isSpinning}
@@ -349,7 +374,7 @@ export default function BoothKiosk({ socket }) {
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center animate-fadeIn p-2 pointer-events-none">
               
               {/* Mildly Translucent QR Badge - compact so all outer slices, course names, and colors are 100% visible */}
-              <div className="pointer-events-auto max-w-[220px] sm:max-w-[245px] backdrop-blur-[1px] bg-slate-950/40 border border-brand-orange/70 rounded-3xl p-3 sm:p-3.5 text-center shadow-[0_0_40px_rgba(0,0,0,0.85)] relative transition-all flex flex-col items-center">
+              <div className="pointer-events-auto max-w-[210px] sm:max-w-[230px] backdrop-blur-[1px] bg-slate-950/40 border border-brand-orange/70 rounded-3xl p-2.5 sm:p-3 text-center shadow-[0_0_40px_rgba(0,0,0,0.85)] relative transition-all flex flex-col items-center">
                 
                 {/* Tech Corner Accents */}
                 <div className="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-brand-amber" />
@@ -357,7 +382,7 @@ export default function BoothKiosk({ socket }) {
                 <div className="absolute bottom-2 left-2 w-3 h-3 border-b-2 border-l-2 border-brand-amber" />
                 <div className="absolute bottom-2 right-2 w-3 h-3 border-b-2 border-r-2 border-brand-amber" />
 
-                <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-brand-orange text-white text-[10px] font-black uppercase tracking-wider mb-2 shadow-md">
+                <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-brand-orange text-white text-[10px] font-black uppercase tracking-wider mb-1.5 shadow-md">
                   <QrCode className="w-3 h-3 text-white" />
                   <span>Scan to Spin</span>
                 </div>
@@ -366,25 +391,25 @@ export default function BoothKiosk({ socket }) {
                 <div className="p-2 bg-white rounded-2xl shadow-2xl border-2 border-brand-orange/40">
                   <QRCodeSVG
                     value={registrationUrl || 'http://localhost:3000/register'}
-                    size={145}
+                    size={135}
                     level="M"
                     includeMargin={false}
                   />
                 </div>
 
                 {/* Clean URL Indicator */}
-                <div className="mt-1.5 flex items-center justify-center gap-1 text-[10px] text-brand-amber font-mono font-bold tracking-tight">
+                <div className="mt-1 flex items-center justify-center gap-1 text-[9px] sm:text-[10px] text-brand-amber font-mono font-bold tracking-tight">
                   {isEditingUrl ? (
-                    <div className="flex items-center gap-1 w-full max-w-[180px]">
+                    <div className="flex items-center gap-1 w-full max-w-[170px]">
                       <input
                         type="text"
                         value={customUrlInput}
                         onChange={(e) => setCustomUrlInput(e.target.value)}
-                        className="px-2 py-0.5 rounded bg-brand-dark border border-brand-amber text-[10px] text-white w-full outline-none"
+                        className="px-2 py-0.5 rounded bg-brand-dark border border-brand-amber text-[9px] text-white w-full outline-none"
                       />
                       <button
                         onClick={handleSaveCustomUrl}
-                        className="p-1 rounded bg-brand-orange text-white"
+                        className="p-0.5 rounded bg-brand-orange text-white"
                         title="Apply URL"
                       >
                         <Check className="w-3 h-3" />
@@ -393,7 +418,7 @@ export default function BoothKiosk({ socket }) {
                   ) : (
                     <>
                       <Wifi className="w-2.5 h-2.5 text-brand-orange shrink-0" />
-                      <span className="truncate max-w-[150px]">{registrationUrl}</span>
+                      <span className="truncate max-w-[140px]">{registrationUrl}</span>
                       <button
                         onClick={() => setIsEditingUrl(true)}
                         className="text-slate-400 hover:text-white p-0.5"
@@ -405,8 +430,8 @@ export default function BoothKiosk({ socket }) {
                   )}
                 </div>
 
-                <p className="text-[10px] text-slate-100 mt-1 font-semibold drop-shadow">
-                  ⚡ Scan with camera to unlock wheel!
+                <p className="text-[9px] sm:text-[10px] text-slate-100 mt-0.5 font-semibold drop-shadow">
+                  ⚡ Scan to unlock wheel live!
                 </p>
               </div>
             </div>
@@ -414,13 +439,13 @@ export default function BoothKiosk({ socket }) {
 
         </div>
 
-        {/* BOTTOM CONTROLS: Mode-Aware Bottom Action Bar */}
+        {/* BOTTOM CONTROLS: Compact & Responsive */}
         {isWheelMode ? (
-          <div className="mt-4 sm:mt-5 w-full max-w-sm flex flex-col items-center animate-fadeIn">
+          <div className="w-full max-w-sm flex flex-col items-center animate-fadeIn shrink-0 my-1">
             <button
               onClick={handleSpinClick}
               disabled={isSpinning || (!activeStudent && queue.length === 0)}
-              className={`w-full py-3.5 px-6 rounded-2xl font-black text-base sm:text-lg tracking-wider uppercase transition-all flex items-center justify-center gap-2.5 shadow-2xl active:scale-95 ${
+              className={`w-full py-2.5 sm:py-3 px-5 rounded-2xl font-black text-sm sm:text-base tracking-wider uppercase transition-all flex items-center justify-center gap-2 shadow-2xl active:scale-95 ${
                 isSpinning
                   ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
                   : (activeStudent || queue.length > 0)
@@ -428,7 +453,7 @@ export default function BoothKiosk({ socket }) {
                   : 'bg-brand-card border border-brand-border text-slate-500 cursor-not-allowed'
               }`}
             >
-              <Sparkles className="w-5 h-5 text-amber-200" />
+              <Sparkles className="w-4 h-4 text-amber-200" />
               <span>
                 {isSpinning 
                   ? 'SPINNING WITH SUSPENSE...' 
@@ -439,17 +464,17 @@ export default function BoothKiosk({ socket }) {
                   : 'AWAITING REGISTRATION'}
               </span>
             </button>
-            <p className="text-[11px] text-slate-400 mt-2 text-center">
+            <p className="text-[10px] text-slate-400 mt-1 text-center font-medium">
               {activeStudent 
-                ? 'Student can also tap "Spin" from their phone!' 
-                : 'Scan the QR code to enter the queue!'}
+                ? '👉 Tap wheel on screen OR click spin button!' 
+                : 'Scan QR code to step up to the wheel!'}
             </p>
 
             {/* Up Next Ticker */}
             {queue.length > 0 && (
-              <div className="mt-3 w-full max-w-md bg-brand-card/70 border border-brand-border/60 px-4 py-1.5 rounded-xl flex items-center justify-between text-xs text-slate-300">
+              <div className="mt-1.5 w-full max-w-sm bg-brand-card/70 border border-brand-border/60 px-3 py-1 rounded-xl flex items-center justify-between text-[11px] text-slate-300">
                 <span className="text-slate-400 font-medium">Up Next:</span>
-                <span className="font-bold text-white capitalize truncate max-w-[200px]">
+                <span className="font-bold text-white capitalize truncate max-w-[170px]">
                   1. {queue[0].name} ({queue[0].school})
                 </span>
                 <span className="text-brand-amber font-mono font-bold">
@@ -460,22 +485,22 @@ export default function BoothKiosk({ socket }) {
           </div>
         ) : (
           queue.length > 0 && (
-            <div className="mt-4 w-full max-w-md bg-brand-card/90 border border-brand-border p-3 rounded-2xl flex items-center justify-between text-xs animate-fadeIn">
+            <div className="w-full max-w-md bg-brand-card/90 border border-brand-border px-3 py-1.5 rounded-2xl flex items-center justify-between text-xs animate-fadeIn shrink-0 my-1">
               <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-brand-amber" />
-                <span className="text-slate-300">
-                  <strong className="text-white">{queue.length}</strong> in queue:
+                <Users className="w-3.5 h-3.5 text-brand-amber" />
+                <span className="text-slate-300 text-[11px]">
+                  <strong className="text-white">{queue.length}</strong> in line:
                 </span>
-                <span className="text-brand-amber font-bold capitalize truncate max-w-[140px]">
+                <span className="text-brand-amber font-bold capitalize truncate max-w-[140px] text-[11px]">
                   {queue[0].name}
                 </span>
               </div>
               <button
                 onClick={handleNextStudent}
-                className="px-3 py-1.5 rounded-lg bg-brand-orange hover:bg-orange-600 text-white font-bold text-[11px] flex items-center gap-1 shadow-md"
+                className="px-2.5 py-1 rounded-lg bg-brand-orange hover:bg-orange-600 text-white font-bold text-[10px] flex items-center gap-1 shadow-md"
               >
                 <span>Start Next</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowRight className="w-3 h-3" />
               </button>
             </div>
           )
@@ -483,26 +508,26 @@ export default function BoothKiosk({ socket }) {
 
       </main>
 
-      {/* ---------------- Bottom Ticker / Brand Footer ---------------- */}
-      <footer className="border-t border-brand-border/60 bg-brand-navy/95 py-2.5 px-4 sm:px-6 z-20 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
-        <div className="flex items-center gap-3 sm:gap-4 flex-wrap justify-center text-[11px] sm:text-xs">
+      {/* ---------------- Bottom Ticker / Brand Footer: Compact Single Row ---------------- */}
+      <footer className="border-t border-brand-border/60 bg-brand-navy/95 py-1.5 px-4 sm:px-6 z-20 flex items-center justify-between gap-2 text-[10px] sm:text-[11px] text-slate-400 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap text-[10px] sm:text-[11px]">
           <span className="flex items-center gap-1 text-slate-300 font-semibold">
-            <Bot className="w-3.5 h-3.5 text-brand-orange" />
+            <Bot className="w-3 h-3 text-brand-orange" />
             Robotics & AI Labs
           </span>
-          <span className="text-slate-600">•</span>
-          <span className="flex items-center gap-1 text-slate-300 font-semibold">
-            <Cpu className="w-3.5 h-3.5 text-brand-amber" />
+          <span className="text-slate-600 hidden sm:inline">•</span>
+          <span className="hidden sm:flex items-center gap-1 text-slate-300 font-semibold">
+            <Cpu className="w-3 h-3 text-brand-amber" />
             STEM Tinkering Kits
           </span>
           <span className="text-slate-600">•</span>
           <span className="flex items-center gap-1 text-slate-300 font-semibold">
-            <GraduationCap className="w-3.5 h-3.5 text-emerald-400" />
-            Future Skills Accelerator
+            <GraduationCap className="w-3 h-3 text-emerald-400" />
+            Skill Accelerator
           </span>
         </div>
 
-        <div className="flex items-center gap-3 text-[11px]">
+        <div className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-[11px]">
           <a
             href="https://academy.stem-xpert.com/in/home"
             target="_blank"
