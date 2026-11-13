@@ -104,19 +104,9 @@ export default function SpinWheel({
       ctx.shadowOffsetY = 1;
 
       const label = (prize.shortLabel || prize.label || '').toUpperCase();
-      if (prize.worth) {
-        ctx.fillStyle = prize.textColor || '#FFFFFF';
-        ctx.font = 'bold 12px "Outfit", system-ui, sans-serif';
-        ctx.fillText(label, radius - 16, 0);
-
-        ctx.fillStyle = '#FBA94B';
-        ctx.font = 'bold 10px "Outfit", system-ui, sans-serif';
-        ctx.fillText(prize.worth, radius - 16, 12);
-      } else {
-        ctx.fillStyle = prize.textColor || '#94A3B8';
-        ctx.font = 'bold 12px "Outfit", system-ui, sans-serif';
-        ctx.fillText(label, radius - 16, 4.5);
-      }
+      ctx.fillStyle = prize.textColor || '#FFFFFF';
+      ctx.font = 'bold 12px "Outfit", system-ui, sans-serif';
+      ctx.fillText(label, radius - 18, 4.5);
       ctx.restore();
     });
 

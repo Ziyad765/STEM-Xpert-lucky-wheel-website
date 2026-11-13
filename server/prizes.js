@@ -3,7 +3,7 @@ export const DEFAULT_PRIZES = [
     id: 'p1',
     label: 'Virtual Lab AI',
     shortLabel: 'Virtual Lab AI',
-    worth: '₹90,000',
+    worth: '',
     color: '#059669', // Emerald Green
     textColor: '#FFFFFF',
     icon: 'Bot',
@@ -41,7 +41,7 @@ export const DEFAULT_PRIZES = [
     id: 'p3',
     label: 'Certified Skill Trainer Course',
     shortLabel: 'Skill Trainer',
-    worth: '₹45,000',
+    worth: '',
     color: '#FF4612', // STEM-Xpert Red-Orange
     textColor: '#FFFFFF',
     icon: 'Award',
@@ -79,7 +79,7 @@ export const DEFAULT_PRIZES = [
     id: 'p5',
     label: 'AI for Teachers Course',
     shortLabel: 'AI for Teachers',
-    worth: '₹25,000',
+    worth: '',
     color: '#FBA94B', // Warm Amber Gold
     textColor: '#0B1120',
     icon: 'Cpu',
@@ -117,7 +117,7 @@ export const DEFAULT_PRIZES = [
     id: 'p7',
     label: 'Virtual Lab AI',
     shortLabel: 'Virtual Lab AI',
-    worth: '₹90,000',
+    worth: '',
     color: '#0D9488', // Teal
     textColor: '#FFFFFF',
     icon: 'Bot',
@@ -155,7 +155,7 @@ export const DEFAULT_PRIZES = [
     id: 'p9',
     label: 'Certified Skill Trainer Course',
     shortLabel: 'Skill Trainer',
-    worth: '₹45,000',
+    worth: '',
     color: '#2563EB', // Royal Blue
     textColor: '#FFFFFF',
     icon: 'Award',
@@ -193,7 +193,7 @@ export const DEFAULT_PRIZES = [
     id: 'p11',
     label: 'AI for Teachers Course',
     shortLabel: 'AI for Teachers',
-    worth: '₹25,000',
+    worth: '',
     color: '#7C3AED', // Vivid Purple
     textColor: '#FFFFFF',
     icon: 'Cpu',

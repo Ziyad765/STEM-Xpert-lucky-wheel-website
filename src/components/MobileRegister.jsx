@@ -347,7 +347,6 @@ export default function MobileRegister({ socket }) {
     const rawNumber = import.meta.env.VITE_COMPANY_WHATSAPP || '919400451133';
     const cleanNumber = rawNumber.replace(/\D/g, '');
     const prizeLabel = myRegistration?.prizeWon?.label || 'Course Scholarship';
-    const worth = myRegistration?.prizeWon?.worth ? ` (Worth ${myRegistration.prizeWon.worth})` : '';
     const voucher = myRegistration?.voucherCode || myRegistration?.prizeWon?.voucherCode || 'DIDAC-2026';
     const studentName = myRegistration?.name || 'Student';
     const school = myRegistration?.school || 'DIDAC Attendee';
@@ -359,11 +358,11 @@ export default function MobileRegister({ socket }) {
       `I just won a scholarship course on the Lucky Wheel at your DIDAC India 2026 booth! 🎉\n\n` +
       `👤 *Name:* ${studentName}\n` +
       `🏫 *School/Org:* ${school}\n` +
-      `🏆 *Prize Won:* ${prizeLabel}${worth}\n` +
+      `🏆 *Course Won:* ${prizeLabel}\n` +
       `🎟️ *Voucher Code:* ${voucher}\n` +
       `📱 *Phone:* ${phone}\n` +
       `📧 *Email:* ${email}\n\n` +
-      `Please verify my voucher and send me my course activation link and access instructions. Thank you!`;
+      `Please verify my voucher code and send me the course access instructions. Thank you!`;
 
     return `https://wa.me/${cleanNumber}?text=${encodeURIComponent(text)}`;
   };
@@ -440,9 +439,9 @@ export default function MobileRegister({ socket }) {
             {/* Official Voucher Ticket Card */}
             <div className="my-3.5 p-4 rounded-2xl bg-brand-dark/95 border-2 border-brand-border shadow-inner text-center relative">
               
-              {/* Voucher Worth Badge */}
+              {/* 100% Scholarship Voucher Badge */}
               <div className="inline-block px-3.5 py-1 rounded-xl bg-gradient-to-r from-brand-orange via-orange-500 to-brand-amber text-white font-black text-xs sm:text-sm tracking-wider uppercase mb-2 shadow-md">
-                VOUCHER WORTH: {myRegistration.prizeWon?.worth || '₹25,000+'}
+                100% SCHOLARSHIP VOUCHER
               </div>
 
               {/* Course Title from Voucher */}
@@ -653,7 +652,7 @@ export default function MobileRegister({ socket }) {
                 Register & Spin to Win
               </h2>
               <p className="text-xs text-brand-amber font-semibold mt-1">
-                Guaranteed Free Course or Virtual Lab Worth up to ₹90,000!
+                Guaranteed Free Course or Virtual Lab Access!
               </p>
             </div>
 

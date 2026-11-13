@@ -348,7 +348,7 @@ export default function BoothKiosk({ socket }) {
               SCAN WITH PHONE & SPIN THE <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-amber via-brand-orange to-red-500">STEM-XPERT</span> WHEEL!
             </h1>
             <p className="text-[11px] sm:text-xs text-slate-300 text-center max-w-xl mt-0.5">
-              Scan the center QR code to unlock the wheel & win courses worth up to <strong className="text-brand-amber font-black">₹90,000</strong>!
+              Scan the center QR code to unlock the wheel & win a <strong className="text-brand-amber font-black">100% Free Course Scholarship</strong>!
             </p>
           </div>
         )}

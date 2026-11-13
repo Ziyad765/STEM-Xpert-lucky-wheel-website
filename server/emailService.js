@@ -71,7 +71,7 @@ export async function sendWinnerEmail({ participant, prize, voucherCode }) {
 
       <div class="prize-box">
         <div class="prize-label">You Have Won</div>
-        <div class="prize-title">${prize.label}${prize.worth ? ` — Worth ${prize.worth}` : ''}</div>
+        <div class="prize-title">${prize.label}</div>
         <p class="prize-desc">${prize.description}</p>
         <div style="font-size: 12px; color: #94A3B8; margin-bottom: 6px;">OFFICIAL VOUCHER CODE</div>
         <div class="voucher-pill">${voucherCode}</div>

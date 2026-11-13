@@ -168,12 +168,10 @@ export default function WinnerModal({
           {/* Prize Banner Box */}
           <div className="my-3 p-3.5 rounded-2xl bg-brand-dark/95 border border-brand-border shadow-inner text-center">
             
-            {/* Voucher Worth Badge */}
-            {prize?.worth && (
-              <div className="inline-block px-3 py-1 rounded-xl bg-gradient-to-r from-brand-orange via-orange-500 to-brand-amber text-white font-black text-xs sm:text-sm tracking-wider uppercase mb-1.5 shadow-md">
-                VOUCHER WORTH: {prize.worth}
-              </div>
-            )}
+            {/* 100% Scholarship Voucher Badge */}
+            <div className="inline-block px-3 py-1 rounded-xl bg-gradient-to-r from-brand-orange via-orange-500 to-brand-amber text-white font-black text-xs sm:text-sm tracking-wider uppercase mb-1.5 shadow-md">
+              100% SCHOLARSHIP VOUCHER
+            </div>
 
             <div 
               className="text-lg sm:text-xl font-black mt-1 mb-1 tracking-tight"
