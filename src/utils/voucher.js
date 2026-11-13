@@ -32,3 +32,4 @@ export function getExactVoucherCode(prizeOrLabel) {
 
   return 'DIDAC100';
 }
+

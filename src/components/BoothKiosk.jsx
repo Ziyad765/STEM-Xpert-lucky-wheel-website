@@ -223,75 +223,38 @@ export default function BoothKiosk({ socket }) {
   return (
     <div className="h-screen h-[100dvh] max-h-screen bg-brand-dark bg-cyber-grid text-slate-100 flex flex-col justify-between select-none relative overflow-hidden">
       
-      {/* ---------------- Top Navbar: Clean & Compact with Both Logos ---------------- */}
-      <header className="px-4 py-2 border-b border-brand-border/60 bg-brand-navy/95 backdrop-blur-md flex items-center justify-between z-20 shadow-md shrink-0">
-        
-        {/* Left: STEM-Xpert Logo */}
-        <div className="flex items-center gap-3">
-          <div className="bg-white px-3 py-1.5 rounded-xl shadow-sm border border-slate-200 flex items-center">
-            <img 
-              src="/logo.png" 
-              alt="STEM Xpert Logo" 
-              className="h-8 sm:h-9 object-contain"
-            />
-          </div>
-          <div className="hidden sm:block">
-            <div className="text-xs font-black text-white tracking-wide uppercase">
-              STEM-Xpert
-            </div>
-            <p className="text-[10px] text-brand-amber font-semibold">
-              Nurturing Innovation
-            </p>
-          </div>
-        </div>
+      {/* Floating Audio & Fullscreen Controls (Discreet Top-Right, No Clunky Navbar) */}
+      <div className="fixed top-2.5 right-2.5 z-50 flex items-center gap-1.5">
+        <button
+          onClick={handleToggleSound}
+          className="p-2 rounded-xl bg-slate-900/60 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white backdrop-blur-md transition-colors shadow-lg"
+          title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
+        >
+          {isMuted ? <VolumeX className="w-3.5 h-3.5 text-red-400" /> : <Volume2 className="w-3.5 h-3.5 text-brand-amber" />}
+        </button>
 
-        {/* Right: DIDAC SKILLS Logo + Exhibition Info + Controls */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm">
-            <img 
-              src="/didac-skills-logo.png" 
-              alt="DIDAC SKILLS" 
-              className="h-8 sm:h-9 object-contain"
-            />
-          </div>
-
-          <div className="hidden md:block text-right">
-            <div className="text-[10px] font-black text-white uppercase tracking-wider">
-              25-27 NOV 2026
-            </div>
-            <p className="text-[9px] text-slate-400">
-              BIEC, Bengaluru
-            </p>
-          </div>
-
-          {/* Minimal Controls: Sound & Fullscreen */}
-          <div className="flex items-center gap-1.5 pl-2 border-l border-brand-border/70">
-            <button
-              onClick={handleToggleSound}
-              className="p-2 rounded-xl bg-brand-card hover:bg-brand-border border border-brand-border text-slate-300 transition-colors"
-              title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
-            >
-              {isMuted ? <VolumeX className="w-3.5 h-3.5 text-red-400" /> : <Volume2 className="w-3.5 h-3.5 text-brand-amber" />}
-            </button>
-
-            <button
-              onClick={handleToggleFullscreen}
-              className="p-2 rounded-xl bg-brand-card hover:bg-brand-border border border-brand-border text-slate-300 transition-colors"
-              title="Toggle Kiosk Fullscreen"
-            >
-              {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
-            </button>
-          </div>
-        </div>
-      </header>
+        <button
+          onClick={handleToggleFullscreen}
+          className="p-2 rounded-xl bg-slate-900/60 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white backdrop-blur-md transition-colors shadow-lg"
+          title="Toggle Kiosk Fullscreen"
+        >
+          {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
+        </button>
+      </div>
 
       {/* ---------------- MAIN STAGE: Scaled for Zero-Scroll on Tablets ---------------- */}
       <main className="flex-1 min-h-0 w-full max-w-5xl mx-auto px-3 py-1 flex flex-col justify-between items-center z-10 relative overflow-hidden">
 
-        {/* TOP CALLOUT BAR: Priority Writing for Scan & Spin */}
+        {/* TOP CALLOUT BAR: Priority Writing with Transparent PNG Logos */}
         {isWheelMode ? (
           /* Active Student Header when ready to spin */
           <div className="w-full max-w-xl my-1 shrink-0 animate-fadeIn">
+            {/* Transparent Logos flanking active view */}
+            <div className="flex items-center justify-between mb-1.5 px-2">
+              <img src="/logo.png" alt="STEM Xpert" className="h-7 sm:h-8 object-contain drop-shadow" />
+              <img src="/didac-skills-logo.png" alt="DIDAC SKILLS" className="h-7 sm:h-8 object-contain drop-shadow brightness-110" />
+            </div>
+
             {(activeStudent || queue.length > 0) ? (
               (() => {
                 const currentPerson = activeStudent || queue[0];
@@ -342,18 +305,39 @@ export default function BoothKiosk({ socket }) {
             )}
           </div>
         ) : (
-          /* Attract Header: Priority Writing for passersby to Scan & Spin */
-          <div className="w-full flex flex-col items-center justify-center animate-fadeIn text-center my-0.5 shrink-0">
-            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-gradient-to-r from-brand-amber/15 to-brand-orange/15 border border-brand-orange/40 text-brand-amber text-[10px] sm:text-[11px] font-black uppercase tracking-wider mb-1">
-              <Sparkles className="w-3 h-3 text-brand-amber animate-spin-slow" />
-              <span>DIDAC SKILLS 2026 • 100% GUARANTEED COURSE SCHOLARSHIP</span>
+          /* Attract Header: Clean Transparent PNG Logos (No BG) Flanking Priority Writing */
+          <div className="w-full max-w-5xl mx-auto px-2 pt-2 pb-0.5 flex items-center justify-between gap-3 sm:gap-6 animate-fadeIn shrink-0">
+            {/* Left: STEM-Xpert Logo (Transparent PNG, No BG) */}
+            <div className="shrink-0 flex items-center">
+              <img 
+                src="/logo.png" 
+                alt="STEM Xpert" 
+                className="h-9 sm:h-11 md:h-13 w-auto object-contain drop-shadow-[0_4px_12px_rgba(255,70,18,0.25)]"
+              />
             </div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white text-center tracking-tight leading-tight max-w-2xl">
-              SCAN WITH PHONE & SPIN THE <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-amber via-brand-orange to-red-500">STEM-XPERT</span> WHEEL!
-            </h1>
-            <p className="text-[11px] sm:text-xs text-slate-300 text-center max-w-xl mt-0.5">
-              Scan the center QR code to unlock the wheel & win a <strong className="text-brand-amber font-black">100% Free Course Scholarship</strong>!
-            </p>
+
+            {/* Center: Priority Writing for passersby to Scan & Spin */}
+            <div className="flex-1 flex flex-col items-center justify-center text-center min-w-0">
+              <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-gradient-to-r from-brand-amber/15 to-brand-orange/15 border border-brand-orange/40 text-brand-amber text-[10px] sm:text-[11px] font-black uppercase tracking-wider mb-1">
+                <Sparkles className="w-3 h-3 text-brand-amber animate-spin-slow" />
+                <span>DIDAC SKILLS 2026 • 100% GUARANTEED COURSE SCHOLARSHIP</span>
+              </div>
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white text-center tracking-tight leading-tight">
+                SCAN WITH PHONE & SPIN THE <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-amber via-brand-orange to-red-500">STEM-XPERT</span> WHEEL!
+              </h1>
+              <p className="text-[11px] sm:text-xs text-slate-300 text-center max-w-xl mt-0.5">
+                Scan the center QR code to unlock the wheel & win a <strong className="text-brand-amber font-black">100% Free Course Scholarship</strong>!
+              </p>
+            </div>
+
+            {/* Right: DIDAC SKILLS Logo (Transparent PNG, No BG) */}
+            <div className="shrink-0 flex items-center">
+              <img 
+                src="/didac-skills-logo.png" 
+                alt="DIDAC SKILLS" 
+                className="h-9 sm:h-11 md:h-13 w-auto object-contain drop-shadow-[0_4px_12px_rgba(147,51,234,0.25)] brightness-110"
+              />
+            </div>
           </div>
         )}
 

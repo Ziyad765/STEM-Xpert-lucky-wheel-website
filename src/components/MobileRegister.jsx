@@ -373,13 +373,9 @@ export default function MobileRegister({ socket }) {
 
       {/* Mobile Header with Official STEM Xpert & DIDAC SKILLS Logos */}
       <header className="max-w-md w-full mx-auto flex items-center justify-between pb-3 border-b border-brand-border/60">
-        <div className="flex items-center gap-2">
-          <div className="bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm flex items-center">
-            <img src="/logo.png" alt="STEM Xpert" className="h-7 sm:h-8 object-contain" />
-          </div>
-          <div className="bg-white px-2.5 py-1.5 rounded-xl border border-slate-200 shadow-sm flex items-center">
-            <img src="/didac-skills-logo.png" alt="DIDAC SKILLS" className="h-7 sm:h-8 object-contain" />
-          </div>
+        <div className="flex items-center gap-3">
+          <img src="/logo.png" alt="STEM Xpert" className="h-7 sm:h-8 object-contain drop-shadow" />
+          <img src="/didac-skills-logo.png" alt="DIDAC SKILLS" className="h-7 sm:h-8 object-contain drop-shadow brightness-110" />
         </div>
         <div className="flex items-center gap-2">
           {myRegistration && (
@@ -402,26 +398,22 @@ export default function MobileRegister({ socket }) {
         {myRegistration?.status === 'completed' && (
           <div className="bg-gradient-to-b from-brand-card via-brand-dark to-brand-navy border-2 border-brand-orange rounded-3xl p-5 sm:p-6 text-center shadow-2xl relative overflow-hidden animate-fadeIn">
 
-            {/* Header with Official Logos: STEM-Xpert & DIDAC SKILLS */}
+            {/* Header with Official Logos: STEM-Xpert & DIDAC SKILLS (Transparent PNGs) */}
             <div className="flex items-center justify-between border-b border-brand-border/60 pb-2.5 mb-3">
-              <div className="flex items-center gap-1.5">
-                <div className="bg-white px-2 py-0.5 rounded-lg border border-slate-200 shadow-sm">
-                  <img src="/logo.png" alt="STEM Xpert" className="h-5 object-contain" />
-                </div>
+              <div className="flex items-center gap-2">
+                <img src="/logo.png" alt="STEM Xpert" className="h-6 sm:h-7 object-contain drop-shadow" />
                 <div className="text-left hidden sm:block">
                   <div className="text-[9px] font-black text-white uppercase">STEM-Xpert</div>
                   <div className="text-[7px] text-brand-amber font-semibold">Nurturing Innovation</div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <div className="text-right">
                   <div className="text-[8px] font-black text-brand-amber uppercase tracking-wider">25-27 NOV 2026</div>
                   <div className="text-[7px] text-slate-400">BIEC, Bengaluru</div>
                 </div>
-                <div className="bg-white px-1.5 py-0.5 rounded-lg border border-slate-200 shadow-sm">
-                  <img src="/didac-skills-logo.png" alt="DIDAC SKILLS" className="h-5 object-contain" />
-                </div>
+                <img src="/didac-skills-logo.png" alt="DIDAC SKILLS" className="h-6 sm:h-7 object-contain drop-shadow brightness-110" />
               </div>
             </div>
 
