@@ -100,31 +100,57 @@ function saveLocalPrizes() {
 
 loadLocalData();
 
+const DEFAULT_MONGO_URI = 'mongodb+srv://ziyadkomakkal_db_user:ziyad@cluster0.qtdkyov.mongodb.net/stem_xpert_didac?retryWrites=true&w=majority';
+
+// Global cache for serverless environments (e.g. Vercel)
+let cached = global._mongooseCache;
+if (!cached) {
+  cached = global._mongooseCache = { conn: null, promise: null };
+}
+
 // ----------------- DB Initialization -----------------
 export async function initDB() {
-  const uri = process.env.MONGODB_URI;
-  if (!uri) {
-    console.log('ℹ️  No MONGODB_URI set. Using zero-config local storage.');
-    return false;
+  const uri = process.env.MONGODB_URI || DEFAULT_MONGO_URI;
+
+  if (cached.conn && mongoose.connection.readyState === 1) {
+    isConnectedToMongo = true;
+    if (!MongoParticipant) {
+      MongoParticipant = mongoose.models.Participant || mongoose.model('Participant', participantSchema);
+    }
+    if (!MongoPrize) {
+      MongoPrize = mongoose.models.Prize || mongoose.model('Prize', prizeSchema);
+    }
+    return true;
+  }
+
+  if (!cached.promise) {
+    console.log('🔄 Connecting to MongoDB Atlas...');
+    cached.promise = mongoose.connect(uri, {
+      serverSelectionTimeoutMS: 8000,
+      bufferCommands: false,
+    }).then((m) => {
+      console.log('✅ Connected successfully to MongoDB Atlas!');
+      return m;
+    });
   }
 
   try {
-    console.log('🔄 Connecting to MongoDB Atlas...');
-    await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 8000,
-    });
+    await cached.promise;
+    cached.conn = mongoose.connection;
     isConnectedToMongo = true;
     MongoParticipant = mongoose.models.Participant || mongoose.model('Participant', participantSchema);
     MongoPrize = mongoose.models.Prize || mongoose.model('Prize', prizeSchema);
-    console.log('✅ Connected successfully to MongoDB Atlas!');
 
-    // Sync prizes collection
-    await MongoPrize.deleteMany({});
-    await MongoPrize.insertMany(DEFAULT_PRIZES);
-    console.log('📦 Synchronized course prizes with MongoDB Atlas.');
+    // Sync prizes collection only if empty
+    const prizeCount = await MongoPrize.countDocuments();
+    if (prizeCount === 0) {
+      await MongoPrize.insertMany(DEFAULT_PRIZES);
+      console.log('📦 Initialized course prizes with MongoDB Atlas.');
+    }
 
     return true;
   } catch (err) {
+    cached.promise = null;
     console.warn('⚠️ MongoDB connection failed. Falling back to local storage:', err.message);
     isConnectedToMongo = false;
     return false;
@@ -219,13 +245,12 @@ export async function registerParticipant(data) {
   const queuePosition = shouldBeActive ? 0 : (currentQueue.length + 1);
 
   const newDoc = {
-    _id: isConnectedToMongo ? undefined : 'usr_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
     name: data.name.trim(),
     phone: cleanPhone,
     email: cleanEmail,
     school: data.school.trim(),
-    grade: data.grade.trim(),
-    interest: data.interest.trim(),
+    grade: data.grade?.trim() || 'General',
+    interest: data.interest?.trim() || 'Robotics & STEM',
     status,
     queuePosition,
     prizeWon: null,
@@ -237,8 +262,13 @@ export async function registerParticipant(data) {
     activatedAt: shouldBeActive ? new Date() : null
   };
 
+  if (!isConnectedToMongo) {
+    newDoc._id = 'usr_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+  }
+
   if (isConnectedToMongo && MongoParticipant) {
     const created = await MongoParticipant.create(newDoc);
+    console.log('✅ Registered participant in MongoDB Atlas:', created._id, created.name);
     return { success: true, participant: created };
   } else {
     localParticipants.push(newDoc);

@@ -36,14 +36,10 @@ export const app = express();
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 
-// Initialize DB on cold start
-let dbInitialized = false;
+// Ensure DB connection (cached in server/db.js across serverless requests)
 async function ensureDB() {
-  if (!dbInitialized) {
-    await initDB();
-    initEmailTransporter();
-    dbInitialized = true;
-  }
+  await initDB();
+  initEmailTransporter();
 }
 
 // Track in-memory spin state
@@ -177,16 +173,22 @@ function getExactVoucherCode(prize) {
 
   currentSpinData = completedData;
 
-  // Background email send (doesn't block spin response)
-  sendWinnerEmail({
-    participant: updatedParticipant || active,
-    prize: winningPrize,
-    voucherCode
-  }).then(emailResult => {
-    markEmailSent(active._id, emailResult.success);
-  }).catch(err => {
-    console.error('Email send background error:', err);
-  });
+  // Send winner email (safely bounded so serverless sends before lambda finishes)
+  try {
+    const emailResult = await Promise.race([
+      sendWinnerEmail({
+        participant: updatedParticipant || active,
+        prize: winningPrize,
+        voucherCode
+      }),
+      new Promise(resolve => setTimeout(() => resolve({ success: false, reason: 'timeout' }), 3000))
+    ]);
+    if (emailResult?.success) {
+      await markEmailSent(active._id, true);
+    }
+  } catch (err) {
+    console.error('Email send error:', err);
+  }
 
   if (ioInstance) {
     ioInstance.emit('spin:started', {
