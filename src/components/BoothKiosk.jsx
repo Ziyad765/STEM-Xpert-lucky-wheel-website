@@ -250,9 +250,17 @@ export default function BoothKiosk({ socket }) {
           /* Active Student Header when ready to spin */
           <div className="w-full max-w-xl my-1 shrink-0 animate-fadeIn">
             {/* Transparent Logos flanking active view */}
-            <div className="flex items-center justify-between mb-1.5 px-2">
-              <img src="/logo.png" alt="STEM Xpert" className="h-7 sm:h-8 object-contain drop-shadow" />
-              <img src="/didac-skills-logo.png" alt="DIDAC SKILLS" className="h-7 sm:h-8 object-contain drop-shadow brightness-110" />
+            <div className="flex items-center justify-between mb-2 px-2">
+              <img 
+                src="/logo.png" 
+                alt="STEM Xpert" 
+                className="h-10 sm:h-12 md:h-14 w-auto object-contain drop-shadow-[0_4px_12px_rgba(255,70,18,0.3)]" 
+              />
+              <img 
+                src="/didac-skills-logo.png" 
+                alt="DIDAC SKILLS" 
+                className="h-10 sm:h-12 md:h-14 w-auto object-contain drop-shadow-[0_4px_12px_rgba(147,51,234,0.3)] brightness-110" 
+              />
             </div>
 
             {(activeStudent || queue.length > 0) ? (
@@ -306,13 +314,13 @@ export default function BoothKiosk({ socket }) {
           </div>
         ) : (
           /* Attract Header: Clean Transparent PNG Logos (No BG) Flanking Priority Writing */
-          <div className="w-full max-w-5xl mx-auto px-2 pt-2 pb-0.5 flex items-center justify-between gap-3 sm:gap-6 animate-fadeIn shrink-0">
+          <div className="w-full max-w-6xl mx-auto px-3 pt-2 pb-0.5 flex items-center justify-between gap-3 sm:gap-6 animate-fadeIn shrink-0">
             {/* Left: STEM-Xpert Logo (Transparent PNG, No BG) */}
-            <div className="shrink-0 flex items-center">
+            <div className="shrink-0 flex items-center justify-center">
               <img 
                 src="/logo.png" 
                 alt="STEM Xpert" 
-                className="h-9 sm:h-11 md:h-13 w-auto object-contain drop-shadow-[0_4px_12px_rgba(255,70,18,0.25)]"
+                className="h-14 sm:h-18 md:h-22 lg:h-24 w-auto max-w-[150px] sm:max-w-[210px] md:max-w-[260px] object-contain drop-shadow-[0_4px_16px_rgba(255,70,18,0.35)] transition-all hover:scale-105"
               />
             </div>
 
@@ -331,11 +339,11 @@ export default function BoothKiosk({ socket }) {
             </div>
 
             {/* Right: DIDAC SKILLS Logo (Transparent PNG, No BG) */}
-            <div className="shrink-0 flex items-center">
+            <div className="shrink-0 flex items-center justify-center">
               <img 
                 src="/didac-skills-logo.png" 
                 alt="DIDAC SKILLS" 
-                className="h-9 sm:h-11 md:h-13 w-auto object-contain drop-shadow-[0_4px_12px_rgba(147,51,234,0.25)] brightness-110"
+                className="h-14 sm:h-18 md:h-22 lg:h-24 w-auto max-w-[130px] sm:max-w-[180px] md:max-w-[220px] object-contain drop-shadow-[0_4px_16px_rgba(147,51,234,0.35)] brightness-110 transition-all hover:scale-105"
               />
             </div>
           </div>

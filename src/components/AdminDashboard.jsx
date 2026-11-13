@@ -115,7 +115,10 @@ export default function AdminDashboard({ socket }) {
       {/* Top Bar with Official Logo */}
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-brand-border/60">
         <div className="flex items-center gap-4">
-          <img src="/logo.png" alt="STEM Xpert" className="h-9 object-contain drop-shadow" />
+          <div className="flex items-center gap-3">
+            <img src="/logo.png" alt="STEM Xpert" className="h-10 sm:h-12 object-contain drop-shadow" />
+            <img src="/didac-skills-logo.png" alt="DIDAC SKILLS" className="h-10 sm:h-12 object-contain drop-shadow brightness-110" />
+          </div>
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-xl sm:text-2xl font-black text-white">

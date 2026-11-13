@@ -127,20 +127,20 @@ export default function WinnerModal({
 
           {/* Header with Official Logos: STEM-Xpert & DIDAC SKILLS (Transparent PNGs) */}
           <div className="flex items-center justify-between border-b border-brand-border/60 pb-2.5 mb-3">
-            <div className="flex items-center gap-2">
-              <img src="/logo.png" alt="STEM Xpert" className="h-7 sm:h-8 object-contain drop-shadow" />
+            <div className="flex items-center gap-2.5">
+              <img src="/logo.png" alt="STEM Xpert" className="h-10 sm:h-12 object-contain drop-shadow" />
               <div className="text-left hidden sm:block">
                 <div className="text-[10px] font-black text-white uppercase">STEM-Xpert</div>
                 <div className="text-[8px] text-brand-amber font-semibold">Nurturing Innovation</div>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <div className="text-right">
                 <div className="text-[9px] font-black text-brand-amber uppercase tracking-wider">25-27 NOV 2026</div>
                 <div className="text-[8px] text-slate-400">BIEC, Bengaluru</div>
               </div>
-              <img src="/didac-skills-logo.png" alt="DIDAC SKILLS" className="h-7 sm:h-8 object-contain drop-shadow brightness-110" />
+              <img src="/didac-skills-logo.png" alt="DIDAC SKILLS" className="h-10 sm:h-12 object-contain drop-shadow brightness-110" />
             </div>
           </div>
 
