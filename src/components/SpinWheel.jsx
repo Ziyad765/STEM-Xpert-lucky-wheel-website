@@ -105,8 +105,8 @@ export default function SpinWheel({
 
       const label = (prize.shortLabel || prize.label || '').toUpperCase();
       ctx.fillStyle = prize.textColor || '#FFFFFF';
-      ctx.font = 'bold 13.5px "Outfit", system-ui, sans-serif';
-      ctx.fillText(label, radius - 20, 5);
+      ctx.font = 'bold 15px "Outfit", system-ui, sans-serif';
+      ctx.fillText(label, radius - 24, 6);
       ctx.restore();
     });
 
@@ -117,7 +117,7 @@ export default function SpinWheel({
       const pegY = Math.sin(pegAngle) * (radius + 2);
 
       ctx.beginPath();
-      ctx.arc(pegX, pegY, 4.5, 0, 2 * Math.PI);
+      ctx.arc(pegX, pegY, 5, 0, 2 * Math.PI);
       ctx.fillStyle = '#FBA94B';
       ctx.shadowColor = '#FBA94B';
       ctx.shadowBlur = 6;
@@ -255,14 +255,14 @@ export default function SpinWheel({
     <div className="relative flex flex-col items-center justify-center">
       {/* Top Pointer */}
       <div
-        className="absolute -top-3 z-30 pointer-events-none transition-transform duration-75"
+        className="absolute -top-4 z-30 pointer-events-none transition-transform duration-75"
         style={{
           transform: `translateX(-50%) rotate(${pointerWobble}deg)`,
           left: '50%',
-          filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.8))'
+          filter: 'drop-shadow(0 4px 14px rgba(0,0,0,0.85))'
         }}
       >
-        <svg width="44" height="50" viewBox="0 0 48 54" fill="none">
+        <svg width="48" height="56" viewBox="0 0 48 54" fill="none">
           <path
             d="M24 52L8 8C7 5 9 2 12 2H36C39 2 41 5 40 8L24 52Z"
             fill="url(#pointerGrad)"
@@ -281,12 +281,12 @@ export default function SpinWheel({
       </div>
 
       {/* Canvas Wheel */}
-      <div className="relative p-1.5 sm:p-2 rounded-full border-2 border-brand-orange/40 bg-gradient-to-b from-brand-card to-brand-navy shadow-2xl flex items-center justify-center">
+      <div className="relative p-2 sm:p-2.5 rounded-full border-2 border-brand-orange/40 bg-gradient-to-b from-brand-card to-brand-navy shadow-2xl flex items-center justify-center">
         <canvas
           ref={canvasRef}
-          width={600}
-          height={600}
-          className="w-[min(88vw,min(58vh,520px))] h-[min(88vw,min(58vh,520px))] aspect-square select-none cursor-pointer"
+          width={720}
+          height={720}
+          className="w-[min(94vw,min(72vh,620px))] h-[min(94vw,min(72vh,620px))] aspect-square select-none cursor-pointer"
           onClick={() => {
             if (canSpin && !isSpinning && onSpinRequest) {
               onSpinRequest();
@@ -298,11 +298,11 @@ export default function SpinWheel({
         {canSpin && !isSpinning && (
           <button
             onClick={onSpinRequest}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-brand-orange to-brand-amber text-white font-extrabold text-xs sm:text-sm uppercase tracking-wider shadow-2xl hover:scale-105 active:scale-95 transition-transform flex flex-col items-center justify-center animate-pulse z-20 border-2 border-white/50"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-brand-orange to-brand-amber text-white font-extrabold text-xs sm:text-sm uppercase tracking-wider shadow-2xl hover:scale-105 active:scale-95 transition-transform flex flex-col items-center justify-center animate-pulse z-20 border-2 border-white/50"
           >
-            <span className="text-lg">⚡</span>
+            <span className="text-xl">⚡</span>
             <span>TAP TO</span>
-            <span className="text-sm font-black text-amber-100">SPIN</span>
+            <span className="text-sm sm:text-base font-black text-amber-100">SPIN</span>
           </button>
         )}
       </div>

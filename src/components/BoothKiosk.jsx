@@ -243,7 +243,7 @@ export default function BoothKiosk({ socket }) {
       </div>
 
       {/* ---------------- MAIN STAGE: Scaled for Zero-Scroll on Tablets ---------------- */}
-      <main className="flex-1 min-h-0 w-full max-w-5xl mx-auto px-3 py-1 flex flex-col justify-between items-center z-10 relative overflow-hidden">
+      <main className="flex-1 min-h-0 w-full max-w-6xl mx-auto px-2 py-0.5 flex flex-col justify-between items-center z-10 relative overflow-hidden">
 
         {/* TOP CALLOUT BAR: Priority Writing with Transparent PNG Logos */}
         {isWheelMode ? (
@@ -362,24 +362,24 @@ export default function BoothKiosk({ socket }) {
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center animate-fadeIn p-2 pointer-events-none">
               
               {/* Mildly Translucent QR Badge - prominent & easy to scan from distance */}
-              <div className="pointer-events-auto max-w-[250px] sm:max-w-[275px] backdrop-blur-[2px] bg-slate-950/50 border-2 border-brand-orange/80 rounded-3xl p-3 sm:p-4 text-center shadow-[0_0_50px_rgba(0,0,0,0.9)] relative transition-all flex flex-col items-center">
+              <div className="pointer-events-auto max-w-[280px] sm:max-w-[315px] backdrop-blur-[2px] bg-slate-950/50 border-2 border-brand-orange/80 rounded-3xl p-3.5 sm:p-4 text-center shadow-[0_0_60px_rgba(0,0,0,0.95)] relative transition-all flex flex-col items-center">
                 
                 {/* Tech Corner Accents */}
-                <div className="absolute top-2.5 left-2.5 w-3.5 h-3.5 border-t-2 border-l-2 border-brand-amber" />
-                <div className="absolute top-2.5 right-2.5 w-3.5 h-3.5 border-t-2 border-r-2 border-brand-amber" />
-                <div className="absolute bottom-2.5 left-2.5 w-3.5 h-3.5 border-b-2 border-l-2 border-brand-amber" />
-                <div className="absolute bottom-2.5 right-2.5 w-3.5 h-3.5 border-b-2 border-r-2 border-brand-amber" />
+                <div className="absolute top-2.5 left-2.5 w-4 h-4 border-t-2 border-l-2 border-brand-amber" />
+                <div className="absolute top-2.5 right-2.5 w-4 h-4 border-t-2 border-r-2 border-brand-amber" />
+                <div className="absolute bottom-2.5 left-2.5 w-4 h-4 border-b-2 border-l-2 border-brand-amber" />
+                <div className="absolute bottom-2.5 right-2.5 w-4 h-4 border-b-2 border-r-2 border-brand-amber" />
 
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-orange text-white text-[11px] sm:text-xs font-black uppercase tracking-wider mb-2 shadow-md">
-                  <QrCode className="w-3.5 h-3.5 text-white" />
+                <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-brand-orange text-white text-xs sm:text-sm font-black uppercase tracking-wider mb-2 shadow-md">
+                  <QrCode className="w-4 h-4 text-white" />
                   <span>Scan with Phone to Spin</span>
                 </div>
 
                 {/* Crisp White QR Box */}
-                <div className="p-2 sm:p-2.5 bg-white rounded-2xl shadow-2xl border-2 border-brand-orange">
+                <div className="p-2.5 sm:p-3 bg-white rounded-2xl shadow-2xl border-2 border-brand-orange">
                   <QRCodeSVG
                     value={registrationUrl || 'http://localhost:3000/register'}
-                    size={175}
+                    size={205}
                     level="M"
                     includeMargin={false}
                   />
