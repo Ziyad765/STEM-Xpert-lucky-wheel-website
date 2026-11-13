@@ -142,7 +142,15 @@ export async function executeSpin(requestedBy = 'booth') {
   const targetAngle = calculateTargetAngle(safeIndex, prizes.length);
   const durationMs = 7500; // 7.5 seconds for dramatic near-miss suspense
 
-  const voucherCode = winningPrize.voucherCode || 'DIDAC100';
+function getExactVoucherCode(prize) {
+  const name = (prize?.label || prize?.shortLabel || '').toLowerCase();
+  if (name.includes('virtual') || name.includes('robotics') || name.includes('lab')) return 'AILAB100';
+  if (name.includes('teacher') || name.includes('ait')) return 'DIDACAIT100';
+  if (name.includes('trainer') || name.includes('skill') || name.includes('facilitator')) return 'SF100';
+  return prize?.voucherCode || 'DIDAC100';
+}
+
+  const voucherCode = getExactVoucherCode(winningPrize);
 
   // Set spin lock
   spinLockUntil = Date.now() + durationMs;

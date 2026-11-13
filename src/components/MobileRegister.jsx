@@ -11,6 +11,7 @@ import {
   RotateCcw,
   UserPlus
 } from 'lucide-react';
+import { getExactVoucherCode } from '../utils/voucher';
 
 export default function MobileRegister({ socket }) {
   const [formData, setFormData] = useState({
@@ -151,7 +152,7 @@ export default function MobileRegister({ socket }) {
                   ...spinPerson,
                   status: 'completed',
                   prizeWon: spinDoc.prize || spinPerson.prizeWon,
-                  voucherCode: spinDoc.voucherCode || spinPerson.voucherCode
+                  voucherCode: getExactVoucherCode(spinDoc.prize || spinPerson.prizeWon) || spinDoc.voucherCode || spinPerson.voucherCode
                 };
                 setMyRegistration(completedDoc);
                 localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(completedDoc));
@@ -320,7 +321,7 @@ export default function MobileRegister({ socket }) {
               ...myRegistration,
               status: 'completed',
               prizeWon: data.prize,
-              voucherCode: `STEM-${data.prize?.voucherPrefix || 'COURSE'}-${Math.floor(1000 + Math.random() * 9000)}`
+              voucherCode: getExactVoucherCode(data.prize)
             };
             setMyRegistration(completedDoc);
             localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(completedDoc));
@@ -347,7 +348,7 @@ export default function MobileRegister({ socket }) {
     const rawNumber = import.meta.env.VITE_COMPANY_WHATSAPP || '919400451133';
     const cleanNumber = rawNumber.replace(/\D/g, '');
     const prizeLabel = myRegistration?.prizeWon?.label || 'Course Scholarship';
-    const voucher = myRegistration?.voucherCode || myRegistration?.prizeWon?.voucherCode || 'DIDAC-2026';
+    const voucher = getExactVoucherCode(myRegistration?.prizeWon) || myRegistration?.voucherCode || 'DIDAC100';
     const studentName = myRegistration?.name || 'Student';
     const school = myRegistration?.school || 'DIDAC Attendee';
     const phone = myRegistration?.phone || '';
@@ -373,11 +374,11 @@ export default function MobileRegister({ socket }) {
       {/* Mobile Header with Official STEM Xpert & DIDAC SKILLS Logos */}
       <header className="max-w-md w-full mx-auto flex items-center justify-between pb-3 border-b border-brand-border/60">
         <div className="flex items-center gap-2">
-          <div className="bg-white px-2.5 py-1 rounded-xl border border-slate-200 shadow-sm">
-            <img src="/logo.png" alt="STEM Xpert" className="h-6 sm:h-7 object-contain" />
+          <div className="bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm flex items-center">
+            <img src="/logo.png" alt="STEM Xpert" className="h-7 sm:h-8 object-contain" />
           </div>
-          <div className="bg-white px-2 py-1 rounded-xl border border-slate-200 shadow-sm">
-            <img src="/didac-skills-logo.png" alt="DIDAC SKILLS" className="h-6 sm:h-7 object-contain" />
+          <div className="bg-white px-2.5 py-1.5 rounded-xl border border-slate-200 shadow-sm flex items-center">
+            <img src="/didac-skills-logo.png" alt="DIDAC SKILLS" className="h-7 sm:h-8 object-contain" />
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -469,7 +470,7 @@ export default function MobileRegister({ socket }) {
               <div className="mt-3.5 pt-3 border-t border-brand-border/60 flex flex-col sm:flex-row items-center justify-between gap-1.5">
                 <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider">OFFICIAL VOUCHER CODE:</span>
                 <span className="font-mono text-base font-black text-brand-amber px-4 py-1 rounded-lg bg-brand-card border-2 border-brand-orange/60 tracking-widest shadow-sm">
-                  {myRegistration.voucherCode || myRegistration.prizeWon?.voucherCode}
+                  {getExactVoucherCode(myRegistration.prizeWon) || myRegistration.voucherCode}
                 </span>
               </div>
             </div>

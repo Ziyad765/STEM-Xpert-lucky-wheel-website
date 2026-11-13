@@ -19,6 +19,7 @@ import {
 import SpinWheel from './SpinWheel';
 import WinnerModal from './WinnerModal';
 import { audio } from '../utils/audio';
+import { getExactVoucherCode } from '../utils/voucher';
 
 export default function BoothKiosk({ socket }) {
   const [activeStudent, setActiveStudent] = useState(null);
@@ -90,7 +91,10 @@ export default function BoothKiosk({ socket }) {
 
       socket.on('spin:completed', (data) => {
         setIsSpinning(false);
-        setWinnerModalData(data);
+        setWinnerModalData({
+          ...data,
+          voucherCode: getExactVoucherCode(data?.prize) || data?.voucherCode || 'DIDAC100'
+        });
       });
     }
 
@@ -172,7 +176,7 @@ export default function BoothKiosk({ socket }) {
         setWinnerModalData({
           participant: currentStudent,
           prize: data.prize,
-          voucherCode: `STEM-${data.prize?.voucherPrefix || 'COURSE'}-${Math.floor(1000 + Math.random() * 9000)}`
+          voucherCode: getExactVoucherCode(data.prize) || data.voucherCode || 'DIDAC100'
         });
       }, data.durationMs || 7500);
 
@@ -224,11 +228,11 @@ export default function BoothKiosk({ socket }) {
         
         {/* Left: STEM-Xpert Logo */}
         <div className="flex items-center gap-3">
-          <div className="bg-white px-2.5 py-1 rounded-xl shadow-sm border border-slate-200 flex items-center">
+          <div className="bg-white px-3 py-1.5 rounded-xl shadow-sm border border-slate-200 flex items-center">
             <img 
               src="/logo.png" 
               alt="STEM Xpert Logo" 
-              className="h-7 sm:h-8 object-contain"
+              className="h-8 sm:h-9 object-contain"
             />
           </div>
           <div className="hidden sm:block">
@@ -243,11 +247,11 @@ export default function BoothKiosk({ socket }) {
 
         {/* Right: DIDAC SKILLS Logo + Exhibition Info + Controls */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-white px-2.5 py-1 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm">
             <img 
               src="/didac-skills-logo.png" 
               alt="DIDAC SKILLS" 
-              className="h-7 sm:h-8 object-contain"
+              className="h-8 sm:h-9 object-contain"
             />
           </div>
 
@@ -373,43 +377,43 @@ export default function BoothKiosk({ socket }) {
           {!isWheelMode && (
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center animate-fadeIn p-2 pointer-events-none">
               
-              {/* Mildly Translucent QR Badge - compact so all outer slices, course names, and colors are 100% visible */}
-              <div className="pointer-events-auto max-w-[210px] sm:max-w-[230px] backdrop-blur-[1px] bg-slate-950/40 border border-brand-orange/70 rounded-3xl p-2.5 sm:p-3 text-center shadow-[0_0_40px_rgba(0,0,0,0.85)] relative transition-all flex flex-col items-center">
+              {/* Mildly Translucent QR Badge - prominent & easy to scan from distance */}
+              <div className="pointer-events-auto max-w-[250px] sm:max-w-[275px] backdrop-blur-[2px] bg-slate-950/50 border-2 border-brand-orange/80 rounded-3xl p-3 sm:p-4 text-center shadow-[0_0_50px_rgba(0,0,0,0.9)] relative transition-all flex flex-col items-center">
                 
                 {/* Tech Corner Accents */}
-                <div className="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-brand-amber" />
-                <div className="absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2 border-brand-amber" />
-                <div className="absolute bottom-2 left-2 w-3 h-3 border-b-2 border-l-2 border-brand-amber" />
-                <div className="absolute bottom-2 right-2 w-3 h-3 border-b-2 border-r-2 border-brand-amber" />
+                <div className="absolute top-2.5 left-2.5 w-3.5 h-3.5 border-t-2 border-l-2 border-brand-amber" />
+                <div className="absolute top-2.5 right-2.5 w-3.5 h-3.5 border-t-2 border-r-2 border-brand-amber" />
+                <div className="absolute bottom-2.5 left-2.5 w-3.5 h-3.5 border-b-2 border-l-2 border-brand-amber" />
+                <div className="absolute bottom-2.5 right-2.5 w-3.5 h-3.5 border-b-2 border-r-2 border-brand-amber" />
 
-                <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-brand-orange text-white text-[10px] font-black uppercase tracking-wider mb-1.5 shadow-md">
-                  <QrCode className="w-3 h-3 text-white" />
-                  <span>Scan to Spin</span>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-orange text-white text-[11px] sm:text-xs font-black uppercase tracking-wider mb-2 shadow-md">
+                  <QrCode className="w-3.5 h-3.5 text-white" />
+                  <span>Scan with Phone to Spin</span>
                 </div>
 
                 {/* Crisp White QR Box */}
-                <div className="p-2 bg-white rounded-2xl shadow-2xl border-2 border-brand-orange/40">
+                <div className="p-2 sm:p-2.5 bg-white rounded-2xl shadow-2xl border-2 border-brand-orange">
                   <QRCodeSVG
                     value={registrationUrl || 'http://localhost:3000/register'}
-                    size={135}
+                    size={175}
                     level="M"
                     includeMargin={false}
                   />
                 </div>
 
                 {/* Clean URL Indicator */}
-                <div className="mt-1 flex items-center justify-center gap-1 text-[9px] sm:text-[10px] text-brand-amber font-mono font-bold tracking-tight">
+                <div className="mt-1.5 flex items-center justify-center gap-1 text-[10px] sm:text-[11px] text-brand-amber font-mono font-bold tracking-tight">
                   {isEditingUrl ? (
-                    <div className="flex items-center gap-1 w-full max-w-[170px]">
+                    <div className="flex items-center gap-1 w-full max-w-[190px]">
                       <input
                         type="text"
                         value={customUrlInput}
                         onChange={(e) => setCustomUrlInput(e.target.value)}
-                        className="px-2 py-0.5 rounded bg-brand-dark border border-brand-amber text-[9px] text-white w-full outline-none"
+                        className="px-2 py-0.5 rounded bg-brand-dark border border-brand-amber text-[10px] text-white w-full outline-none"
                       />
                       <button
                         onClick={handleSaveCustomUrl}
-                        className="p-0.5 rounded bg-brand-orange text-white"
+                        className="p-1 rounded bg-brand-orange text-white"
                         title="Apply URL"
                       >
                         <Check className="w-3 h-3" />
@@ -417,21 +421,21 @@ export default function BoothKiosk({ socket }) {
                     </div>
                   ) : (
                     <>
-                      <Wifi className="w-2.5 h-2.5 text-brand-orange shrink-0" />
-                      <span className="truncate max-w-[140px]">{registrationUrl}</span>
+                      <Wifi className="w-3 h-3 text-brand-orange shrink-0" />
+                      <span className="truncate max-w-[160px]">{registrationUrl}</span>
                       <button
                         onClick={() => setIsEditingUrl(true)}
                         className="text-slate-400 hover:text-white p-0.5"
                         title="Edit URL"
                       >
-                        <Edit2 className="w-2.5 h-2.5" />
+                        <Edit2 className="w-3 h-3" />
                       </button>
                     </>
                   )}
                 </div>
 
-                <p className="text-[9px] sm:text-[10px] text-slate-100 mt-0.5 font-semibold drop-shadow">
-                  ⚡ Scan to unlock wheel live!
+                <p className="text-[10px] sm:text-[11px] text-slate-100 mt-1 font-bold drop-shadow">
+                  ⚡ Register & tap robot screen to spin!
                 </p>
               </div>
             </div>

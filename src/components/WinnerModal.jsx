@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import html2canvas from 'html2canvas';
 import { audio } from '../utils/audio';
+import { getExactVoucherCode } from '../utils/voucher';
 import { 
   Trophy, 
   Sparkles, 
@@ -24,7 +25,7 @@ export default function WinnerModal({
 
   const participant = winnerData?.participant;
   const prize = winnerData?.prize;
-  const voucherCode = winnerData?.voucherCode;
+  const voucherCode = getExactVoucherCode(prize) || winnerData?.voucherCode || 'DIDAC100';
 
   // 1. Confetti & Audio fanfare
   useEffect(() => {

@@ -105,8 +105,8 @@ export default function SpinWheel({
 
       const label = (prize.shortLabel || prize.label || '').toUpperCase();
       ctx.fillStyle = prize.textColor || '#FFFFFF';
-      ctx.font = 'bold 12px "Outfit", system-ui, sans-serif';
-      ctx.fillText(label, radius - 18, 4.5);
+      ctx.font = 'bold 13.5px "Outfit", system-ui, sans-serif';
+      ctx.fillText(label, radius - 20, 5);
       ctx.restore();
     });
 
@@ -284,9 +284,9 @@ export default function SpinWheel({
       <div className="relative p-1.5 sm:p-2 rounded-full border-2 border-brand-orange/40 bg-gradient-to-b from-brand-card to-brand-navy shadow-2xl flex items-center justify-center">
         <canvas
           ref={canvasRef}
-          width={540}
-          height={540}
-          className="w-[min(74vw,min(48vh,420px))] h-[min(74vw,min(48vh,420px))] aspect-square select-none cursor-pointer"
+          width={600}
+          height={600}
+          className="w-[min(88vw,min(58vh,520px))] h-[min(88vw,min(58vh,520px))] aspect-square select-none cursor-pointer"
           onClick={() => {
             if (canSpin && !isSpinning && onSpinRequest) {
               onSpinRequest();
