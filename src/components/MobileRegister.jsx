@@ -467,132 +467,28 @@ export default function MobileRegister({ socket }) {
               </div>
             </div>
 
-            <div className="text-xs text-emerald-400 flex items-center justify-center gap-1.5 mb-2">
-              <CheckCircle className="w-4 h-4 shrink-0" />
-              <span>Confirmation recorded for {myRegistration.email}</span>
-            </div>
-
-            {/* Step-by-Step Course Redemption Guide */}
-            <div className="my-3.5 p-4 rounded-2xl bg-brand-dark/95 border-2 border-brand-orange/40 text-left shadow-lg">
-              <div className="font-extrabold text-brand-amber text-xs uppercase tracking-wider flex items-center gap-1.5 mb-2.5 pb-2 border-b border-brand-border/60">
-                <span>📖</span>
-                <span>Simple Steps to Access Your Course:</span>
-              </div>
-
-              {/* AI for Teachers */}
-              {(myRegistration.prizeWon?.label || '').toLowerCase().includes('teacher') && (
-                <div className="space-y-2 text-[11px] text-slate-300">
-                  <div className="flex gap-2 items-start">
-                    <span className="w-5 h-5 rounded-full bg-brand-orange/20 text-brand-orange font-bold flex items-center justify-center shrink-0 text-[10px]">1</span>
-                    <span>Visit: <a href="https://academy.stem-xpert.com/in/course/AI-for-Teachers" target="_blank" rel="noreferrer" className="text-cyan-400 font-bold underline">academy.stem-xpert.com/in/course/AI-for-Teachers</a></span>
-                  </div>
-                  <div className="flex gap-2 items-start">
-                    <span className="w-5 h-5 rounded-full bg-brand-orange/20 text-brand-orange font-bold flex items-center justify-center shrink-0 text-[10px]">2</span>
-                    <span><strong>Log in</strong> to your account or <strong>Sign Up</strong> if you're a new user.</span>
-                  </div>
-                  <div className="flex gap-2 items-start">
-                    <span className="w-5 h-5 rounded-full bg-brand-orange/20 text-brand-orange font-bold flex items-center justify-center shrink-0 text-[10px]">3</span>
-                    <span>Open the <strong>AI for Teachers</strong> course.</span>
-                  </div>
-                  <div className="flex gap-2 items-start">
-                    <span className="w-5 h-5 rounded-full bg-brand-orange/20 text-brand-orange font-bold flex items-center justify-center shrink-0 text-[10px]">4</span>
-                    <span>Click <strong>Enroll Now</strong> and complete the enrollment.</span>
-                  </div>
-                  <div className="flex gap-2 items-start">
-                    <span className="w-5 h-5 rounded-full bg-brand-orange/20 text-brand-orange font-bold flex items-center justify-center shrink-0 text-[10px]">5</span>
-                    <span>Go to your <strong>Dashboard</strong> and click <strong>Start Learning</strong>!</span>
-                  </div>
-                </div>
-              )}
-
-              {/* STEM-Xpert AI Virtual Lab */}
-              {((myRegistration.prizeWon?.label || '').toLowerCase().includes('virtual') || (myRegistration.prizeWon?.label || '').toLowerCase().includes('lab') || (myRegistration.prizeWon?.label || '').toLowerCase().includes('robotics')) && (
-                <div className="space-y-2 text-[11px] text-slate-300">
-                  <div className="flex gap-2 items-start">
-                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center shrink-0 text-[10px]">1</span>
-                    <span>Visit: <a href="https://stem-xpert.com/in/school-registration" target="_blank" rel="noreferrer" className="text-cyan-400 font-bold underline">stem-xpert.com/in/school-registration</a></span>
-                  </div>
-                  <div className="flex gap-2 items-start">
-                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center shrink-0 text-[10px]">2</span>
-                    <span>Complete the registration form with your school details.</span>
-                  </div>
-                  <div className="flex gap-2 items-start">
-                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center shrink-0 text-[10px]">3</span>
-                    <span>Under lab selection, choose <strong>CTAI & CODING LAB</strong>.</span>
-                  </div>
-                  <div className="flex gap-2 items-start">
-                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center shrink-0 text-[10px]">4</span>
-                    <span>Submit your registration to activate hands-on virtual AI tinkering!</span>
-                  </div>
-                </div>
-              )}
-
-              {/* STEM Facilitator / Skill Trainer Course */}
-              {((myRegistration.prizeWon?.label || '').toLowerCase().includes('trainer') || (myRegistration.prizeWon?.label || '').toLowerCase().includes('facilitator') || (myRegistration.prizeWon?.label || '').toLowerCase().includes('skill')) && (
-                <div className="space-y-2 text-[11px] text-slate-300">
-                  <div className="flex gap-2 items-start">
-                    <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 font-bold flex items-center justify-center shrink-0 text-[10px]">1</span>
-                    <span>Visit: <a href="https://academy.stem-xpert.com/in/course/STEM-Facilitator-Course" target="_blank" rel="noreferrer" className="text-cyan-400 font-bold underline">academy.stem-xpert.com/in/course/STEM-Facilitator-Course</a></span>
-                  </div>
-                  <div className="flex gap-2 items-start">
-                    <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 font-bold flex items-center justify-center shrink-0 text-[10px]">2</span>
-                    <span>Sign up with your email ID and verify with the OTP.</span>
-                  </div>
-                  <div className="flex gap-2 items-start">
-                    <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 font-bold flex items-center justify-center shrink-0 text-[10px]">3</span>
-                    <span>Complete profile and go to <strong>Course List → Educator / Trainer Program → STEM Facilitator Course</strong>.</span>
-                  </div>
-                  <div className="flex gap-2 items-start">
-                    <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 font-bold flex items-center justify-center shrink-0 text-[10px]">4</span>
-                    <span>Click <strong>Enroll Now</strong> and enter coupon code: <strong className="font-mono text-brand-amber font-bold">SF100</strong>.</span>
-                  </div>
-                  <div className="flex gap-2 items-start">
-                    <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 font-bold flex items-center justify-center shrink-0 text-[10px]">5</span>
-                    <span>Click Apply & start learning from your Dashboard!</span>
-                  </div>
-                  <div className="mt-2 p-2 rounded-lg bg-blue-950/40 border border-blue-800/40 text-[10px] text-blue-200">
-                    🎓 <strong>Certificate:</strong> Complete course sessions, register & take the Evaluation Exam, then download certificate from Account → Certificate.
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Direct WhatsApp Claim Button */}
-            <div className="my-4 pt-2 border-t border-brand-border/60">
+            {/* Big Prominent Claim Your Prize on WhatsApp Button */}
+            <div className="my-5">
               <a
                 href={getWhatsAppClaimUrl()}
                 target="_blank"
                 rel="noreferrer"
-                className="w-full py-4 px-5 rounded-2xl bg-[#25D366] hover:bg-[#1EBE5D] active:scale-95 text-white font-black text-sm sm:text-base flex items-center justify-center gap-2.5 shadow-xl shadow-emerald-950/40 border border-white/40 transition-all animate-bounce"
+                className="w-full py-4 sm:py-5 px-6 rounded-2xl bg-[#25D366] hover:bg-[#1EBE5D] active:scale-95 text-white font-black text-base sm:text-lg flex items-center justify-center gap-3 shadow-2xl shadow-emerald-950/50 border-2 border-white/40 transition-all animate-bounce"
               >
-                <svg className="w-5 h-5 fill-current shrink-0" viewBox="0 0 24 24">
+                <svg className="w-6 h-6 fill-current shrink-0" viewBox="0 0 24 24">
                   <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
                 </svg>
                 <span>CLAIM YOUR PRIZE ON WHATSAPP</span>
               </a>
-              <p className="text-[11px] text-emerald-400 mt-2 font-medium">
-                💬 Tap to send your voucher code to STEM-Xpert on WhatsApp for instant course activation!
-              </p>
             </div>
 
-            <div className="space-y-2 mt-3 pt-2 border-t border-brand-border/60">
-              {myRegistration.prizeWon?.enrollUrl && (
-                <a
-                  href={myRegistration.prizeWon.enrollUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="w-full py-2.5 px-4 rounded-xl bg-brand-navy border border-brand-border hover:bg-brand-border text-slate-200 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md"
-                >
-                  <span>Enroll / Access Course on STEM-Xpert</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-brand-orange" />
-                </a>
-              )}
-
+            {/* Option to Register Another Student / Spin Again */}
+            <div className="pt-3 border-t border-brand-border/60">
               <button
                 onClick={handleClearSession}
-                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-brand-orange via-orange-500 to-brand-amber hover:brightness-110 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-lg"
+                className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-brand-orange via-orange-500 to-brand-amber hover:brightness-110 active:scale-95 text-white font-extrabold text-sm sm:text-base flex items-center justify-center gap-2 transition-all shadow-lg"
               >
-                <UserPlus className="w-3.5 h-3.5" />
+                <UserPlus className="w-4 h-4" />
                 <span>Register Another Student / Spin Again</span>
               </button>
             </div>
