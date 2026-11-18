@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { 
   Users, 
@@ -26,6 +26,7 @@ export default function BoothKiosk({ socket }) {
   const [queue, setQueue] = useState([]);
   const [prizes, setPrizes] = useState([]);
   const [isSpinning, setIsSpinning] = useState(false);
+  const spinLockRef = useRef(false);
   const [targetAngle, setTargetAngle] = useState(0);
   const [spinDuration, setSpinDuration] = useState(7500);
   const [winnerModalData, setWinnerModalData] = useState(null);
@@ -98,7 +99,7 @@ export default function BoothKiosk({ socket }) {
       });
     }
 
-    // High-reliability polling fallback (for Vercel serverless)
+    // High-reliability 700ms polling fallback (fast detection for registrations & spins)
     const pollInterval = setInterval(async () => {
       try {
         const res = await fetch('/api/queue');
@@ -112,11 +113,11 @@ export default function BoothKiosk({ socket }) {
         }
 
         // Auto-advance if idle and students are waiting in line
-        if (!data.active && data.queue && data.queue.length > 0 && !isSpinning) {
+        if (!data.active && data.queue && data.queue.length > 0 && !isSpinning && !spinLockRef.current) {
           fetch('/api/queue/next', { method: 'POST' }).catch(() => {});
         }
       } catch (err) {}
-    }, 1200);
+    }, 700);
 
     return () => {
       clearInterval(pollInterval);
@@ -132,27 +133,35 @@ export default function BoothKiosk({ socket }) {
   // Mode: if student is active OR in queue -> wheel stage; otherwise -> QR first
   const isWheelMode = viewOverride === 'wheel' || (viewOverride === 'auto' && Boolean(activeStudent || queue.length > 0));
 
-  // Trigger spin
+  // Trigger spin with synchronous duplicate-click guard
   const handleSpinClick = async () => {
-    if (isSpinning) return;
+    // 1. Immediately and synchronously guard against any repeated clicks / double taps!
+    if (spinLockRef.current || isSpinning) return;
+    spinLockRef.current = true;
+    setIsSpinning(true);
     audio.init();
 
     try {
       // If no active student currently but someone is waiting in queue, auto-activate them!
       let currentStudent = activeStudent;
       if (!currentStudent && queue.length > 0) {
-        const nextRes = await fetch('/api/queue/next', { method: 'POST' });
-        const nextData = await nextRes.json();
-        if (nextData.nextStudent) {
-          currentStudent = nextData.nextStudent;
-          setActiveStudent(currentStudent);
-        } else {
+        try {
+          const nextRes = await fetch('/api/queue/next', { method: 'POST' });
+          const nextData = await nextRes.json();
+          if (nextData.nextStudent) {
+            currentStudent = nextData.nextStudent;
+            setActiveStudent(currentStudent);
+          } else {
+            currentStudent = queue[0];
+          }
+        } catch (e) {
           currentStudent = queue[0];
         }
       }
 
       if (!currentStudent) {
-        alert('No registered student waiting. Please scan the QR code to register!');
+        spinLockRef.current = false;
+        setIsSpinning(false);
         return;
       }
 
@@ -163,15 +172,21 @@ export default function BoothKiosk({ socket }) {
       });
       const data = await res.json();
       if (!data.success) {
-        alert(data.message || 'Could not start spin');
+        // If already spinning, silently continue without popping up an error!
+        if (data.message && data.message.toLowerCase().includes('already spinning')) {
+          return;
+        }
+        console.warn('Spin could not start:', data.message);
+        spinLockRef.current = false;
+        setIsSpinning(false);
         return;
       }
 
-      setIsSpinning(true);
       setTargetAngle(data.targetAngle);
       setSpinDuration(data.durationMs || 7500);
 
       setTimeout(async () => {
+        spinLockRef.current = false;
         setIsSpinning(false);
         setWinnerModalData({
           participant: currentStudent,
@@ -182,6 +197,8 @@ export default function BoothKiosk({ socket }) {
 
     } catch (err) {
       console.error('Failed to trigger spin:', err);
+      spinLockRef.current = false;
+      setIsSpinning(false);
     }
   };
 

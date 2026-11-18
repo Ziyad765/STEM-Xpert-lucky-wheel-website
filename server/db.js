@@ -27,13 +27,14 @@ const participantSchema = new mongoose.Schema({
   interest: { type: String, required: true },
   status: { 
     type: String, 
-    enum: ['waiting', 'active', 'completed', 'cancelled'], 
+    enum: ['waiting', 'active', 'spinning', 'completed', 'cancelled'], 
     default: 'waiting' 
   },
   queuePosition: { type: Number, default: 0 },
   prizeWon: { type: Object, default: null },
   voucherCode: { type: String, default: null },
   spunAt: { type: Date, default: null },
+  spinEndsAt: { type: Date, default: null },
   emailSent: { type: Boolean, default: false },
   emailSentAt: { type: Date, default: null },
   registeredAt: { type: Date, default: Date.now },
@@ -279,9 +280,27 @@ export async function registerParticipant(data) {
 
 export async function getActiveParticipant() {
   if (isConnectedToMongo && MongoParticipant) {
-    return await MongoParticipant.findOne({ status: 'active' });
+    const activeOrSpinning = await MongoParticipant.findOne({ status: { $in: ['active', 'spinning'] } });
+    if (activeOrSpinning) {
+      if (activeOrSpinning.status === 'spinning' && activeOrSpinning.spinEndsAt && new Date() >= new Date(activeOrSpinning.spinEndsAt)) {
+        activeOrSpinning.status = 'completed';
+        await activeOrSpinning.save();
+        return null;
+      }
+      return activeOrSpinning;
+    }
+    return null;
   } else {
-    return localParticipants.find(p => p.status === 'active') || null;
+    const activeOrSpinning = localParticipants.find(p => p.status === 'active' || p.status === 'spinning');
+    if (activeOrSpinning) {
+      if (activeOrSpinning.status === 'spinning' && activeOrSpinning.spinEndsAt && new Date() >= new Date(activeOrSpinning.spinEndsAt)) {
+        activeOrSpinning.status = 'completed';
+        saveLocalParticipants();
+        return null;
+      }
+      return activeOrSpinning;
+    }
+    return null;
   }
 }
 
@@ -351,24 +370,27 @@ export async function popNextInQueue() {
   }
 }
 
-export async function completeCurrentParticipant(id, prize, voucherCode) {
+export async function completeCurrentParticipant(id, prize, voucherCode, durationMs = 7500) {
+  const spinEndsAt = new Date(Date.now() + durationMs);
   if (isConnectedToMongo && MongoParticipant) {
     const p = await MongoParticipant.findById(id);
     if (p) {
-      p.status = 'completed';
+      p.status = 'spinning';
       p.prizeWon = prize;
       p.voucherCode = voucherCode;
       p.spunAt = new Date();
+      p.spinEndsAt = spinEndsAt;
       await p.save();
       return p;
     }
   } else {
     const p = localParticipants.find(item => item._id === id);
     if (p) {
-      p.status = 'completed';
+      p.status = 'spinning';
       p.prizeWon = prize;
       p.voucherCode = voucherCode;
       p.spunAt = new Date();
+      p.spinEndsAt = spinEndsAt;
       saveLocalParticipants();
       return p;
     }
@@ -403,32 +425,47 @@ export async function getAllParticipants() {
 export async function getParticipantById(id) {
   if (!id) return null;
   const cleanId = String(id).trim();
+  let found = null;
   if (isConnectedToMongo && MongoParticipant) {
     try {
       if (mongoose.Types.ObjectId.isValid(cleanId)) {
-        const found = await MongoParticipant.findById(cleanId);
-        if (found) return found;
+        found = await MongoParticipant.findById(cleanId);
       }
-      const cleanPhone = cleanId.replace(/\D/g, '');
-      const found = await MongoParticipant.findOne({
-        $or: [
-          { _id: cleanId },
-          ...(cleanPhone ? [{ phone: cleanPhone }] : []),
-          { email: cleanId.toLowerCase() }
-        ]
-      }).sort({ registeredAt: -1 });
-      return found || null;
+      if (!found) {
+        const cleanPhone = cleanId.replace(/\D/g, '');
+        found = await MongoParticipant.findOne({
+          $or: [
+            { _id: cleanId },
+            ...(cleanPhone ? [{ phone: cleanPhone }] : []),
+            { email: cleanId.toLowerCase() }
+          ]
+        }).sort({ registeredAt: -1 });
+      }
     } catch (e) {
       return null;
     }
   } else {
     const cleanPhone = cleanId.replace(/\D/g, '');
-    return localParticipants.find(item => 
+    found = localParticipants.find(item => 
       String(item._id) === cleanId || 
       (cleanPhone && item.phone === cleanPhone) ||
       item.email?.toLowerCase() === cleanId.toLowerCase()
     ) || null;
   }
+
+  if (found) {
+    // If it was spinning and the spin time has passed, transition to completed
+    if (found.status === 'spinning' && found.spinEndsAt && new Date() >= new Date(found.spinEndsAt)) {
+      found.status = 'completed';
+      if (isConnectedToMongo && found.save) {
+        await found.save();
+      } else {
+        saveLocalParticipants();
+      }
+    }
+    return found;
+  }
+  return null;
 }
 
 export async function getPrizes() {

@@ -119,7 +119,7 @@ export default function MobileRegister({ socket }) {
       });
     }
 
-    // High-reliability 1.2s polling fallback
+    // Fast 750ms polling fallback (syncs wheel & status reliably)
     const interval = setInterval(async () => {
       try {
         const res = await fetch('/api/queue');
@@ -143,7 +143,8 @@ export default function MobileRegister({ socket }) {
               (myRegistration.email && spinPerson.email?.toLowerCase() === myRegistration.email.toLowerCase());
 
             if (isMe) {
-              if (data.isSpinning) {
+              const isStillSpinning = data.isSpinning || spinPerson.status === 'spinning' || (spinPerson.spinEndsAt && new Date() < new Date(spinPerson.spinEndsAt));
+              if (isStillSpinning) {
                 setIsSpinningServer(true);
               } else {
                 // Spin completed! Reveal prize and WhatsApp claim immediately!
@@ -167,19 +168,19 @@ export default function MobileRegister({ socket }) {
           const phoneMatch = data.active?.phone && data.active.phone === myPhone;
 
           if ((myId && activeId === myId) || phoneMatch) {
-            if (data.active.status === 'completed' || data.active.prizeWon) {
-              if (!data.isSpinning) {
-                const completedDoc = {
-                  ...myRegistration,
-                  ...data.active,
-                  status: 'completed'
-                };
-                setMyRegistration(completedDoc);
-                localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(completedDoc));
-                setIsSpinningServer(false);
-              } else {
-                setIsSpinningServer(true);
-              }
+            const isSpinningNow = data.isSpinning || data.active.status === 'spinning' || (data.active.spinEndsAt && new Date() < new Date(data.active.spinEndsAt));
+            if (isSpinningNow) {
+              setIsSpinningServer(true);
+              setMyRegistration(prev => ({ ...prev, status: 'spinning' }));
+            } else if (data.active.status === 'completed' || data.active.prizeWon) {
+              const completedDoc = {
+                ...myRegistration,
+                ...data.active,
+                status: 'completed'
+              };
+              setMyRegistration(completedDoc);
+              localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(completedDoc));
+              setIsSpinningServer(false);
             } else {
               const updated = { ...myRegistration, ...(data.active || {}), status: 'active', queuePosition: 0 };
               setMyRegistration(updated);
@@ -200,7 +201,11 @@ export default function MobileRegister({ socket }) {
                   if (pRes.ok) {
                     const pData = await pRes.json();
                     if (pData.participant) {
-                      if (pData.participant.status === 'completed' || pData.participant.prizeWon) {
+                      const isSpinningNow = pData.participant.status === 'spinning' || (pData.participant.spinEndsAt && new Date() < new Date(pData.participant.spinEndsAt));
+                      if (isSpinningNow) {
+                        setIsSpinningServer(true);
+                        setMyRegistration(prev => ({ ...prev, status: 'spinning' }));
+                      } else if (pData.participant.status === 'completed' || pData.participant.prizeWon) {
                         const completedDoc = {
                           ...myRegistration,
                           ...pData.participant,
@@ -221,7 +226,7 @@ export default function MobileRegister({ socket }) {
           }
         }
       } catch (e) { }
-    }, 1200);
+    }, 750);
 
     return () => {
       clearInterval(interval);
@@ -338,9 +343,16 @@ export default function MobileRegister({ socket }) {
   // Check if it's my turn
   const isMyTurn = myRegistration && (
     myRegistration.status === 'active' ||
+    myRegistration.status === 'spinning' ||
     (queueInfo.active && String(queueInfo.active._id) === String(myRegistration._id)) ||
     (queueInfo.active?.phone && myRegistration.phone && queueInfo.active.phone === myRegistration.phone) ||
     (queueInfo.active?.email && myRegistration.email && queueInfo.active.email.toLowerCase() === myRegistration.email.toLowerCase())
+  );
+
+  const isWheelCurrentlySpinning = Boolean(
+    isSpinningServer || 
+    myRegistration?.status === 'spinning' || 
+    (myRegistration?.spinEndsAt && new Date() < new Date(myRegistration.spinEndsAt))
   );
 
   // WhatsApp Claim URL Generator
@@ -526,16 +538,19 @@ export default function MobileRegister({ socket }) {
               </p>
             </div>
 
-            {/* In case the wheel is spinning */}
-            {isSpinningServer ? (
-              <div className="w-full py-5 px-5 rounded-3xl bg-gradient-to-r from-brand-orange/30 via-orange-500/30 to-brand-amber/30 border-2 border-brand-orange text-center shadow-2xl animate-pulse">
-                <div className="text-3xl mb-1.5 animate-spin-slow inline-block">🎡</div>
-                <div className="text-base font-black text-brand-amber uppercase tracking-wider">
+            {/* When the wheel is spinning */}
+            {isWheelCurrentlySpinning ? (
+              <div className="w-full py-6 px-5 rounded-3xl bg-gradient-to-r from-brand-orange/30 via-orange-500/30 to-brand-amber/30 border-2 border-brand-orange text-center shadow-2xl animate-pulse">
+                <div className="text-4xl mb-2 animate-spin-slow inline-block">🎡</div>
+                <div className="text-lg font-black text-brand-amber uppercase tracking-wider">
                   Wheel is Spinning Live on Robot Screen!
                 </div>
-                <p className="text-xs text-white font-bold mt-1">
-                  👀 Look up at the screen! Your scholarship prize is landing now!
+                <p className="text-xs sm:text-sm text-white font-bold mt-1.5 leading-relaxed">
+                  👀 Look up at the screen! Your guaranteed scholarship prize is landing right now!
                 </p>
+                <div className="mt-3 text-[11px] text-amber-200/90 font-medium">
+                  ✨ Your winning ticket will appear here in seconds...
+                </div>
               </div>
             ) : (
               /* Secondary option: Spin remotely from phone */

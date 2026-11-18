@@ -121,13 +121,13 @@ export function calculateTargetAngle(prizeIndex, totalSlices = 12) {
 export async function executeSpin(requestedBy = 'booth') {
   await ensureDB();
 
-  if (Date.now() < spinLockUntil) {
-    return { success: false, message: 'Wheel is already spinning!' };
-  }
-
   const active = await getActiveParticipant();
   if (!active) {
     return { success: false, message: 'No active student at the wheel. Waiting for registrations!' };
+  }
+
+  if (active.status === 'spinning' || Date.now() < spinLockUntil) {
+    return { success: false, message: 'Wheel is already spinning!' };
   }
 
   const prizes = await getPrizes();
@@ -157,7 +157,8 @@ function getExactVoucherCode(prize) {
   const updatedParticipant = await completeCurrentParticipant(
     active._id,
     winningPrize,
-    voucherCode
+    voucherCode,
+    durationMs
   );
 
   const completedData = {
@@ -323,12 +324,11 @@ app.post('/api/register', async (req, res) => {
 app.get('/api/queue', async (req, res) => {
   await ensureDB();
   try {
-    const isCurrentlySpinning = Date.now() < spinLockUntil;
+    let active = await getActiveParticipant();
+    const isSpinningMongo = active && active.status === 'spinning';
+    const isCurrentlySpinning = isSpinningMongo || (Date.now() < spinLockUntil);
 
-    let active = null;
-    if (isCurrentlySpinning) {
-      active = currentSpinData?.participant || await getActiveParticipant();
-    } else {
+    if (!isCurrentlySpinning && !active) {
       active = await ensureActiveOrPopQueue();
     }
 
@@ -338,7 +338,7 @@ app.get('/api/queue', async (req, res) => {
       active,
       queue,
       isSpinning: isCurrentlySpinning,
-      currentSpinData: currentSpinData || null,
+      currentSpinData: currentSpinData || (isSpinningMongo ? { participant: active, prize: active.prizeWon, voucherCode: active.voucherCode } : null),
       lastCompletedSpin: currentSpinData || null,
       prizes
     });

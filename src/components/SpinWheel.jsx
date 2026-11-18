@@ -286,7 +286,7 @@ export default function SpinWheel({
           ref={canvasRef}
           width={720}
           height={720}
-          className="w-[min(94vw,min(72vh,620px))] h-[min(94vw,min(72vh,620px))] aspect-square select-none cursor-pointer"
+          className={`w-[min(94vw,min(72vh,620px))] h-[min(94vw,min(72vh,620px))] aspect-square select-none ${canSpin && !isSpinning ? 'cursor-pointer' : 'pointer-events-none'}`}
           onClick={() => {
             if (canSpin && !isSpinning && onSpinRequest) {
               onSpinRequest();
