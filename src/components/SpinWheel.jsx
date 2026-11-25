@@ -9,13 +9,19 @@ export default function SpinWheel({
   onSpinEnd,
   canSpin = false,
   onSpinRequest,
-  idleSpin = false
+  idleSpin = false,
+  sizeClass = 'w-[min(94vw,min(72vh,620px))] h-[min(94vw,min(72vh,620px))]'
 }) {
   const canvasRef = useRef(null);
   const [currentRotation, setCurrentRotation] = useState(0);
   const [pointerWobble, setPointerWobble] = useState(0);
   const animFrameRef = useRef(null);
   const lastPegRef = useRef(-1);
+  const onSpinEndRef = useRef(onSpinEnd);
+
+  useEffect(() => {
+    onSpinEndRef.current = onSpinEnd;
+  }, [onSpinEnd]);
 
   // Wheel drawing function
   const drawWheel = (rotationDeg) => {
@@ -215,6 +221,7 @@ export default function SpinWheel({
     if (!isSpinning || targetAngle <= 0) return;
 
     let startTime = null;
+    let hasEnded = false;
     const startAngle = currentRotation % 360;
     const totalDistance = targetAngle - startAngle;
 
@@ -234,10 +241,11 @@ export default function SpinWheel({
 
       if (progress < 1) {
         animFrameRef.current = requestAnimationFrame(animate);
-      } else {
+      } else if (!hasEnded) {
+        hasEnded = true;
         setCurrentRotation(targetAngle % 360);
-        if (onSpinEnd) {
-          onSpinEnd();
+        if (onSpinEndRef.current) {
+          onSpinEndRef.current();
         }
       }
     };
@@ -286,7 +294,7 @@ export default function SpinWheel({
           ref={canvasRef}
           width={720}
           height={720}
-          className={`w-[min(94vw,min(72vh,620px))] h-[min(94vw,min(72vh,620px))] aspect-square select-none ${canSpin && !isSpinning ? 'cursor-pointer' : 'pointer-events-none'}`}
+          className={`${sizeClass} aspect-square select-none ${canSpin && !isSpinning ? 'cursor-pointer' : 'pointer-events-none'}`}
           onClick={() => {
             if (canSpin && !isSpinning && onSpinRequest) {
               onSpinRequest();
@@ -298,11 +306,11 @@ export default function SpinWheel({
         {canSpin && !isSpinning && (
           <button
             onClick={onSpinRequest}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-brand-orange to-brand-amber text-white font-extrabold text-xs sm:text-sm uppercase tracking-wider shadow-2xl hover:scale-105 active:scale-95 transition-transform flex flex-col items-center justify-center animate-pulse z-20 border-2 border-white/50"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[25%] h-[25%] min-w-[76px] min-h-[76px] max-w-[128px] max-h-[128px] rounded-full bg-gradient-to-tr from-brand-orange to-brand-amber text-white font-extrabold text-[11px] sm:text-sm uppercase tracking-wider shadow-2xl hover:scale-105 active:scale-95 transition-transform flex flex-col items-center justify-center animate-pulse z-20 border-2 border-white/50"
           >
-            <span className="text-xl">⚡</span>
-            <span>TAP TO</span>
-            <span className="text-sm sm:text-base font-black text-amber-100">SPIN</span>
+            <span className="text-lg sm:text-xl leading-none">⚡</span>
+            <span className="leading-tight">TAP TO</span>
+            <span className="text-xs sm:text-base font-black text-amber-100 leading-tight">SPIN</span>
           </button>
         )}
       </div>

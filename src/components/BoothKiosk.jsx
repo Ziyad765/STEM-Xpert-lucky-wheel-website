@@ -1,14 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { 
-  Users, 
-  Volume2, 
-  VolumeX, 
-  Maximize, 
-  Minimize, 
-  QrCode, 
-  Sparkles, 
-  ArrowRight,
+import {
+  Maximize,
+  Minimize,
+  QrCode,
+  Sparkles,
   Bot,
   Cpu,
   GraduationCap,
@@ -17,218 +13,55 @@ import {
   Check
 } from 'lucide-react';
 import SpinWheel from './SpinWheel';
-import WinnerModal from './WinnerModal';
-import { audio } from '../utils/audio';
-import { getExactVoucherCode } from '../utils/voucher';
+import { DEFAULT_PRIZES } from '../utils/prizes';
 
-export default function BoothKiosk({ socket }) {
-  const [activeStudent, setActiveStudent] = useState(null);
-  const [queue, setQueue] = useState([]);
-  const [prizes, setPrizes] = useState([]);
-  const [isSpinning, setIsSpinning] = useState(false);
-  const spinLockRef = useRef(false);
-  const [targetAngle, setTargetAngle] = useState(0);
-  const [spinDuration, setSpinDuration] = useState(7500);
-  const [winnerModalData, setWinnerModalData] = useState(null);
-  const [isMuted, setIsMuted] = useState(false);
+export default function BoothKiosk() {
+  const [prizes, setPrizes] = useState(DEFAULT_PRIZES);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  
+
   // Smart QR Code URL
-  const [registrationUrl, setRegistrationUrl] = useState('');
+  const [registrationUrl, setRegistrationUrl] = useState(`${window.location.origin}/register`);
   const [isEditingUrl, setIsEditingUrl] = useState(false);
-  const [customUrlInput, setCustomUrlInput] = useState('');
+  const [customUrlInput, setCustomUrlInput] = useState(`${window.location.origin}/register`);
 
-  // View state: 'auto' | 'qr' | 'wheel'
-  const [viewOverride, setViewOverride] = useState('auto');
-
-  // Detect Smart QR URL (Production Vercel domain or Wi-Fi IP for local testing)
+  // Detect Smart QR URL & optionally sync prizes once (zero polling needed on static TV display)
   useEffect(() => {
-    async function resolveRegistrationUrl() {
+    async function initStaticTV() {
       try {
         const res = await fetch('/api/network-info');
-        const data = await res.json();
-        
-        // If on localhost, use local Wi-Fi IP so other phones on same Wi-Fi can scan
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-          if (data.localIp && data.localIp !== 'localhost') {
-            const wifiUrl = `http://${data.localIp}:3000/register`;
-            setRegistrationUrl(wifiUrl);
-            setCustomUrlInput(wifiUrl);
-            return;
+        if (res.ok) {
+          const data = await res.json();
+          if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            if (data.localIp && data.localIp !== 'localhost') {
+              const wifiUrl = `http://${data.localIp}:3000/register`;
+              setRegistrationUrl(wifiUrl);
+              setCustomUrlInput(wifiUrl);
+            }
           }
         }
       } catch (e) {}
 
-      // On production (e.g. Vercel: https://stem-xpert-lucky-wheel-website-delta.vercel.app/register)
-      const currentOrigin = `${window.location.origin}/register`;
-      setRegistrationUrl(currentOrigin);
-      setCustomUrlInput(currentOrigin);
-    }
-
-    resolveRegistrationUrl();
-  }, []);
-
-  // Sync state via Socket.io AND Polling (Ensures Vercel Serverless runs seamlessly)
-  useEffect(() => {
-    if (socket) {
-      socket.on('queue:init', (data) => {
-        setActiveStudent(data.active);
-        setQueue(data.queue || []);
-        if (data.prizes) setPrizes(data.prizes);
-      });
-
-      socket.on('queue:update', (data) => {
-        setActiveStudent(data.active);
-        setQueue(data.queue || []);
-        if (data.prizes) setPrizes(data.prizes);
-      });
-
-      socket.on('spin:started', (data) => {
-        setIsSpinning(true);
-        setTargetAngle(data.targetAngle);
-        setSpinDuration(data.durationMs || 7500);
-        setWinnerModalData(null);
-      });
-
-      socket.on('spin:completed', (data) => {
-        setIsSpinning(false);
-        setWinnerModalData({
-          ...data,
-          voucherCode: getExactVoucherCode(data?.prize) || data?.voucherCode || 'DIDAC100'
-        });
-      });
-    }
-
-    // High-reliability 700ms polling fallback (fast detection for registrations & spins)
-    const pollInterval = setInterval(async () => {
       try {
-        const res = await fetch('/api/queue');
-        if (!res.ok) return;
-        const data = await res.json();
-        
-        setActiveStudent(data.active);
-        setQueue(data.queue || []);
-        if (data.prizes && data.prizes.length > 0) {
-          setPrizes(data.prizes);
-        }
-
-        // Auto-advance if idle and students are waiting in line
-        if (!data.active && data.queue && data.queue.length > 0 && !isSpinning && !spinLockRef.current) {
-          fetch('/api/queue/next', { method: 'POST' }).catch(() => {});
-        }
-      } catch (err) {}
-    }, 700);
-
-    return () => {
-      clearInterval(pollInterval);
-      if (socket) {
-        socket.off('queue:init');
-        socket.off('queue:update');
-        socket.off('spin:started');
-        socket.off('spin:completed');
-      }
-    };
-  }, [socket]);
-
-  // Mode: if student is active OR in queue -> wheel stage; otherwise -> QR first
-  const isWheelMode = viewOverride === 'wheel' || (viewOverride === 'auto' && Boolean(activeStudent || queue.length > 0));
-
-  // Trigger spin with synchronous duplicate-click guard
-  const handleSpinClick = async () => {
-    // 1. Immediately and synchronously guard against any repeated clicks / double taps!
-    if (spinLockRef.current || isSpinning) return;
-    spinLockRef.current = true;
-    setIsSpinning(true);
-    audio.init();
-
-    try {
-      // If no active student currently but someone is waiting in queue, auto-activate them!
-      let currentStudent = activeStudent;
-      if (!currentStudent && queue.length > 0) {
-        try {
-          const nextRes = await fetch('/api/queue/next', { method: 'POST' });
-          const nextData = await nextRes.json();
-          if (nextData.nextStudent) {
-            currentStudent = nextData.nextStudent;
-            setActiveStudent(currentStudent);
-          } else {
-            currentStudent = queue[0];
+        const prizeRes = await fetch('/api/prizes');
+        if (prizeRes.ok) {
+          const prizeData = await prizeRes.json();
+          if (prizeData.prizes && prizeData.prizes.length > 0) {
+            setPrizes(prizeData.prizes);
           }
-        } catch (e) {
-          currentStudent = queue[0];
         }
-      }
-
-      if (!currentStudent) {
-        spinLockRef.current = false;
-        setIsSpinning(false);
-        return;
-      }
-
-      const res = await fetch('/api/spin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestedBy: 'booth-screen' })
-      });
-      const data = await res.json();
-      if (!data.success) {
-        // If already spinning, silently continue without popping up an error!
-        if (data.message && data.message.toLowerCase().includes('already spinning')) {
-          return;
-        }
-        console.warn('Spin could not start:', data.message);
-        spinLockRef.current = false;
-        setIsSpinning(false);
-        return;
-      }
-
-      setTargetAngle(data.targetAngle);
-      setSpinDuration(data.durationMs || 7500);
-
-      setTimeout(async () => {
-        spinLockRef.current = false;
-        setIsSpinning(false);
-        setWinnerModalData({
-          participant: currentStudent,
-          prize: data.prize,
-          voucherCode: getExactVoucherCode(data.prize) || data.voucherCode || 'DIDAC100'
-        });
-      }, data.durationMs || 7500);
-
-    } catch (err) {
-      console.error('Failed to trigger spin:', err);
-      spinLockRef.current = false;
-      setIsSpinning(false);
+      } catch (e) {}
     }
-  };
 
-  const handleNextStudent = async () => {
-    setWinnerModalData(null);
-    try {
-      const res = await fetch('/api/queue/next', { method: 'POST' });
-      const data = await res.json();
-      if (!data.nextStudent) {
-        setViewOverride('auto');
-      }
-    } catch (err) {
-      console.error('Failed to advance queue:', err);
-    }
-  };
-
-  const handleToggleSound = () => {
-    const muted = audio.toggleMute();
-    setIsMuted(muted);
-  };
+    initStaticTV();
+  }, []);
 
   const handleToggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(e => console.log(e));
+      document.documentElement.requestFullscreen().catch((e) => console.log(e));
       setIsFullscreen(true);
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-        setIsFullscreen(false);
-      }
+    } else if (document.exitFullscreen) {
+      document.exitFullscreen();
+      setIsFullscreen(false);
     }
   };
 
@@ -239,289 +72,142 @@ export default function BoothKiosk({ socket }) {
 
   return (
     <div className="h-screen h-[100dvh] max-h-screen bg-brand-dark bg-cyber-grid text-slate-100 flex flex-col justify-between select-none relative overflow-hidden">
-      
-      {/* Floating Audio & Fullscreen Controls (Discreet Top-Right, No Clunky Navbar) */}
-      <div className="fixed top-2.5 right-2.5 z-50 flex items-center gap-1.5">
-        <button
-          onClick={handleToggleSound}
-          className="p-2 rounded-xl bg-slate-900/60 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white backdrop-blur-md transition-colors shadow-lg"
-          title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
-        >
-          {isMuted ? <VolumeX className="w-3.5 h-3.5 text-red-400" /> : <Volume2 className="w-3.5 h-3.5 text-brand-amber" />}
-        </button>
 
+      {/* Discreet Fullscreen Control (Top-Right for TV Display) */}
+      <div className="fixed top-2.5 right-2.5 z-50 flex items-center gap-1.5">
         <button
           onClick={handleToggleFullscreen}
           className="p-2 rounded-xl bg-slate-900/60 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white backdrop-blur-md transition-colors shadow-lg"
-          title="Toggle Kiosk Fullscreen"
+          title="Toggle TV Fullscreen"
         >
-          {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
+          {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
         </button>
       </div>
 
-      {/* ---------------- MAIN STAGE: Scaled for Zero-Scroll on Tablets ---------------- */}
+      {/* ---------------- STATIC TV STAGE: Scaled for Zero-Scroll ---------------- */}
       <main className="flex-1 min-h-0 w-full max-w-6xl mx-auto px-2 py-0.5 flex flex-col justify-between items-center z-10 relative overflow-hidden">
 
-        {/* TOP CALLOUT BAR: Priority Writing with Transparent PNG Logos */}
-        {isWheelMode ? (
-          /* Active Student Header when ready to spin */
-          <div className="w-full max-w-xl my-1 shrink-0 animate-fadeIn">
-            {/* Transparent Logos flanking active view */}
-            <div className="flex items-center justify-between mb-2 px-2">
-              <img 
-                src="/logo.png" 
-                alt="STEM Xpert" 
-                className="h-10 sm:h-12 md:h-14 w-auto object-contain drop-shadow-[0_4px_12px_rgba(255,70,18,0.3)]" 
-              />
-              <img 
-                src="/didac-skills-logo.png" 
-                alt="DIDAC SKILLS" 
-                className="h-10 sm:h-12 md:h-14 w-auto object-contain drop-shadow-[0_4px_12px_rgba(147,51,234,0.3)] brightness-110" 
-              />
-            </div>
-
-            {(activeStudent || queue.length > 0) ? (
-              (() => {
-                const currentPerson = activeStudent || queue[0];
-                return (
-                  <div className="p-2.5 sm:p-3 rounded-2xl bg-gradient-to-r from-brand-card via-brand-navy to-brand-card border-2 border-brand-orange shadow-xl flex items-center justify-between gap-3 text-left">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-brand-orange to-brand-amber text-white font-black text-base flex items-center justify-center shrink-0 shadow-md">
-                        {currentPerson.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] text-brand-amber uppercase tracking-wider font-extrabold">Active Turn</span>
-                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                        </div>
-                        <h2 className="text-base sm:text-lg font-black text-white capitalize leading-tight">
-                          {currentPerson.name}
-                        </h2>
-                        <div className="text-[11px] text-slate-300">
-                          {currentPerson.school} • <span className="text-brand-amber font-semibold">{currentPerson.interest}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="hidden sm:inline-block px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px] font-black uppercase tracking-wider animate-pulse">
-                        🤖 Tap Wheel to Spin!
-                      </span>
-                      <button
-                        onClick={() => setViewOverride('qr')}
-                        className="text-[11px] text-slate-400 hover:text-white px-2.5 py-1 rounded-lg bg-brand-dark/80 border border-brand-border"
-                      >
-                        ← Back to QR
-                      </button>
-                    </div>
-                  </div>
-                );
-              })()
-            ) : (
-              <div className="p-2.5 rounded-2xl bg-brand-card border border-brand-border flex items-center justify-between text-xs text-slate-400">
-                <span>No student currently selected. Waiting for registrations!</span>
-                <button
-                  onClick={() => setViewOverride('qr')}
-                  className="text-brand-amber font-bold hover:underline"
-                >
-                  Open QR Scanner →
-                </button>
-              </div>
-            )}
-          </div>
-        ) : (
-          /* Attract Header: Clean Transparent PNG Logos (No BG) Flanking Priority Writing */
-          <div className="w-full max-w-6xl mx-auto px-3 pt-2 pb-0.5 flex items-center justify-between gap-3 sm:gap-6 animate-fadeIn shrink-0">
-            {/* Left: STEM-Xpert Logo (Transparent PNG, No BG) */}
-            <div className="shrink-0 flex items-center justify-center">
-              <img 
-                src="/logo.png" 
-                alt="STEM Xpert" 
-                className="h-14 sm:h-18 md:h-22 lg:h-24 w-auto max-w-[150px] sm:max-w-[210px] md:max-w-[260px] object-contain drop-shadow-[0_4px_16px_rgba(255,70,18,0.35)] transition-all hover:scale-105"
-              />
-            </div>
-
-            {/* Center: Priority Writing for passersby to Scan & Spin */}
-            <div className="flex-1 flex flex-col items-center justify-center text-center min-w-0">
-              <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-gradient-to-r from-brand-amber/15 to-brand-orange/15 border border-brand-orange/40 text-brand-amber text-[10px] sm:text-[11px] font-black uppercase tracking-wider mb-1">
-                <Sparkles className="w-3 h-3 text-brand-amber animate-spin-slow" />
-                <span>DIDAC SKILLS 2026 • 100% GUARANTEED COURSE SCHOLARSHIP</span>
-              </div>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white text-center tracking-tight leading-tight">
-                SCAN WITH PHONE & SPIN THE <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-amber via-brand-orange to-red-500">STEM-XPERT</span> WHEEL!
-              </h1>
-              <p className="text-[11px] sm:text-xs text-slate-300 text-center max-w-xl mt-0.5">
-                Scan the center QR code to unlock the wheel & win a <strong className="text-brand-amber font-black">100% Free Course Scholarship</strong>!
-              </p>
-            </div>
-
-            {/* Right: DIDAC SKILLS Logo (Transparent PNG, No BG) */}
-            <div className="shrink-0 flex items-center justify-center">
-              <img 
-                src="/didac-skills-logo.png" 
-                alt="DIDAC SKILLS" 
-                className="h-14 sm:h-18 md:h-22 lg:h-24 w-auto max-w-[130px] sm:max-w-[180px] md:max-w-[220px] object-contain drop-shadow-[0_4px_16px_rgba(147,51,234,0.35)] brightness-110 transition-all hover:scale-105"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* CENTRAL STAGE: Wheel + Translucent Overlay */}
-        <div className="relative flex-1 min-h-0 flex items-center justify-center w-full my-auto">
-          
-          {/* THE REAL LUCKY WHEEL: Full Vibrant Stationary Display */}
-          <div className="transition-all duration-700 opacity-100 filter drop-shadow-[0_0_40px_rgba(255,70,18,0.25)] flex items-center justify-center">
-            <SpinWheel
-              prizes={prizes}
-              isSpinning={isSpinning}
-              targetAngle={targetAngle}
-              duration={spinDuration}
-              canSpin={isWheelMode && Boolean(activeStudent || queue.length > 0)}
-              onSpinRequest={handleSpinClick}
-              idleSpin={false}
+        {/* TOP HEADER: Clean Transparent PNG Logos Flanking Priority Callout */}
+        <div className="w-full max-w-6xl mx-auto px-3 pt-2 pb-0.5 flex items-center justify-between gap-3 sm:gap-6 animate-fadeIn shrink-0">
+          {/* Left: STEM-Xpert Logo */}
+          <div className="shrink-0 flex items-center justify-center">
+            <img
+              src="/logo.png"
+              alt="STEM Xpert"
+              className="h-14 sm:h-18 md:h-22 lg:h-24 w-auto max-w-[150px] sm:max-w-[210px] md:max-w-[260px] object-contain drop-shadow-[0_4px_16px_rgba(255,70,18,0.35)]"
             />
           </div>
 
-          {/* TRANSLUCENT QR OVERLAY (Floating in center hub of stationary wheel with mild transparency) */}
-          {!isWheelMode && (
-            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center animate-fadeIn p-2 pointer-events-none">
-              
-              {/* Mildly Translucent QR Badge - prominent & easy to scan from distance */}
-              <div className="pointer-events-auto max-w-[280px] sm:max-w-[315px] backdrop-blur-[2px] bg-slate-950/50 border-2 border-brand-orange/80 rounded-3xl p-3.5 sm:p-4 text-center shadow-[0_0_60px_rgba(0,0,0,0.95)] relative transition-all flex flex-col items-center">
-                
-                {/* Tech Corner Accents */}
-                <div className="absolute top-2.5 left-2.5 w-4 h-4 border-t-2 border-l-2 border-brand-amber" />
-                <div className="absolute top-2.5 right-2.5 w-4 h-4 border-t-2 border-r-2 border-brand-amber" />
-                <div className="absolute bottom-2.5 left-2.5 w-4 h-4 border-b-2 border-l-2 border-brand-amber" />
-                <div className="absolute bottom-2.5 right-2.5 w-4 h-4 border-b-2 border-r-2 border-brand-amber" />
-
-                <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-brand-orange text-white text-xs sm:text-sm font-black uppercase tracking-wider mb-2 shadow-md">
-                  <QrCode className="w-4 h-4 text-white" />
-                  <span>Scan with Phone to Spin</span>
-                </div>
-
-                {/* Crisp White QR Box */}
-                <div className="p-2.5 sm:p-3 bg-white rounded-2xl shadow-2xl border-2 border-brand-orange">
-                  <QRCodeSVG
-                    value={registrationUrl || 'http://localhost:3000/register'}
-                    size={205}
-                    level="M"
-                    includeMargin={false}
-                  />
-                </div>
-
-                {/* Clean URL Indicator */}
-                <div className="mt-1.5 flex items-center justify-center gap-1 text-[10px] sm:text-[11px] text-brand-amber font-mono font-bold tracking-tight">
-                  {isEditingUrl ? (
-                    <div className="flex items-center gap-1 w-full max-w-[190px]">
-                      <input
-                        type="text"
-                        value={customUrlInput}
-                        onChange={(e) => setCustomUrlInput(e.target.value)}
-                        className="px-2 py-0.5 rounded bg-brand-dark border border-brand-amber text-[10px] text-white w-full outline-none"
-                      />
-                      <button
-                        onClick={handleSaveCustomUrl}
-                        className="p-1 rounded bg-brand-orange text-white"
-                        title="Apply URL"
-                      >
-                        <Check className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <Wifi className="w-3 h-3 text-brand-orange shrink-0" />
-                      <span className="truncate max-w-[160px]">{registrationUrl}</span>
-                      <button
-                        onClick={() => setIsEditingUrl(true)}
-                        className="text-slate-400 hover:text-white p-0.5"
-                        title="Edit URL"
-                      >
-                        <Edit2 className="w-3 h-3" />
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                <p className="text-[10px] sm:text-[11px] text-slate-100 mt-1 font-bold drop-shadow">
-                  ⚡ Register & tap robot screen to spin!
-                </p>
-              </div>
+          {/* Center: Priority Writing for Passersby to Scan & Spin on Phone */}
+          <div className="flex-1 flex flex-col items-center justify-center text-center min-w-0">
+            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-gradient-to-r from-brand-amber/15 to-brand-orange/15 border border-brand-orange/40 text-brand-amber text-[10px] sm:text-[11px] font-black uppercase tracking-wider mb-1">
+              <Sparkles className="w-3 h-3 text-brand-amber animate-spin-slow" />
+              <span>DIDAC SKILLS 2026 • 100% GUARANTEED COURSE SCHOLARSHIP</span>
             </div>
-          )}
+            <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-white text-center tracking-tight leading-tight">
+              SCAN WITH PHONE & SPIN THE{' '}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-amber via-brand-orange to-red-500">
+                STEM-XPERT
+              </span>{' '}
+              WHEEL!
+            </h1>
+            <p className="text-[11px] sm:text-xs md:text-sm text-slate-300 text-center max-w-xl mt-0.5">
+              Scan the center QR code to register & spin right on your phone for a{' '}
+              <strong className="text-brand-amber font-black">100% Free Course Scholarship</strong>!
+            </p>
+          </div>
 
+          {/* Right: DIDAC SKILLS Logo */}
+          <div className="shrink-0 flex items-center justify-center">
+            <img
+              src="/didac-skills-logo.png"
+              alt="DIDAC SKILLS"
+              className="h-14 sm:h-18 md:h-22 lg:h-24 w-auto max-w-[130px] sm:max-w-[180px] md:max-w-[220px] object-contain drop-shadow-[0_4px_16px_rgba(147,51,234,0.35)] brightness-110"
+            />
+          </div>
         </div>
 
-        {/* BOTTOM CONTROLS: Compact & Responsive */}
-        {isWheelMode ? (
-          <div className="w-full max-w-sm flex flex-col items-center animate-fadeIn shrink-0 my-1">
-            <button
-              onClick={handleSpinClick}
-              disabled={isSpinning || (!activeStudent && queue.length === 0)}
-              className={`w-full py-2.5 sm:py-3 px-5 rounded-2xl font-black text-sm sm:text-base tracking-wider uppercase transition-all flex items-center justify-center gap-2 shadow-2xl active:scale-95 ${
-                isSpinning
-                  ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                  : (activeStudent || queue.length > 0)
-                  ? 'bg-gradient-to-r from-brand-orange via-orange-500 to-brand-amber text-white shadow-brand-orange/40 hover:brightness-110 border-2 border-white/40 animate-pulse'
-                  : 'bg-brand-card border border-brand-border text-slate-500 cursor-not-allowed'
-              }`}
-            >
-              <Sparkles className="w-4 h-4 text-amber-200" />
-              <span>
-                {isSpinning 
-                  ? 'SPINNING WITH SUSPENSE...' 
-                  : activeStudent 
-                  ? `SPIN FOR ${activeStudent.name.split(' ')[0].toUpperCase()}!` 
-                  : queue.length > 0
-                  ? `SPIN FOR ${queue[0].name.split(' ')[0].toUpperCase()}!`
-                  : 'AWAITING REGISTRATION'}
-              </span>
-            </button>
-            <p className="text-[10px] text-slate-400 mt-1 text-center font-medium">
-              {activeStudent 
-                ? '👉 Tap wheel on screen OR click spin button!' 
-                : 'Scan QR code to step up to the wheel!'}
-            </p>
+        {/* CENTRAL STAGE: Gentle Rotating Wheel in BG + Translucent QR Overlay */}
+        <div className="relative flex-1 min-h-0 flex items-center justify-center w-full my-auto">
 
-            {/* Up Next Ticker */}
-            {queue.length > 0 && (
-              <div className="mt-1.5 w-full max-w-sm bg-brand-card/70 border border-brand-border/60 px-3 py-1 rounded-xl flex items-center justify-between text-[11px] text-slate-300">
-                <span className="text-slate-400 font-medium">Up Next:</span>
-                <span className="font-bold text-white capitalize truncate max-w-[170px]">
-                  1. {queue[0].name} ({queue[0].school})
-                </span>
-                <span className="text-brand-amber font-mono font-bold">
-                  +{queue.length - 1} more
-                </span>
-              </div>
-            )}
+          {/* THE REAL LUCKY WHEEL: Ambient TV Display */}
+          <div className="filter drop-shadow-[0_0_45px_rgba(255,70,18,0.28)] flex items-center justify-center">
+            <SpinWheel
+              prizes={prizes}
+              isSpinning={false}
+              canSpin={false}
+              idleSpin={true}
+              sizeClass="w-[min(94vw,min(74vh,640px))] h-[min(94vw,min(74vh,640px))]"
+            />
           </div>
-        ) : (
-          queue.length > 0 && (
-            <div className="w-full max-w-md bg-brand-card/90 border border-brand-border px-3 py-1.5 rounded-2xl flex items-center justify-between text-xs animate-fadeIn shrink-0 my-1">
-              <div className="flex items-center gap-2">
-                <Users className="w-3.5 h-3.5 text-brand-amber" />
-                <span className="text-slate-300 text-[11px]">
-                  <strong className="text-white">{queue.length}</strong> in line:
-                </span>
-                <span className="text-brand-amber font-bold capitalize truncate max-w-[140px] text-[11px]">
-                  {queue[0].name}
-                </span>
-              </div>
-              <button
-                onClick={handleNextStudent}
-                className="px-2.5 py-1 rounded-lg bg-brand-orange hover:bg-orange-600 text-white font-bold text-[10px] flex items-center gap-1 shadow-md"
-              >
-                <span>Start Next</span>
-                <ArrowRight className="w-3 h-3" />
-              </button>
-            </div>
-          )
-        )}
 
+          {/* TRANSLUCENT QR OVERLAY */}
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center animate-fadeIn p-2 pointer-events-none">
+            <div className="pointer-events-auto max-w-[285px] sm:max-w-[325px] backdrop-blur-[2px] bg-slate-950/50 border-2 border-brand-orange/80 rounded-3xl p-4 text-center shadow-[0_0_60px_rgba(0,0,0,0.95)] relative flex flex-col items-center">
+
+              {/* Tech Corner Accents */}
+              <div className="absolute top-2.5 left-2.5 w-4 h-4 border-t-2 border-l-2 border-brand-amber" />
+              <div className="absolute top-2.5 right-2.5 w-4 h-4 border-t-2 border-r-2 border-brand-amber" />
+              <div className="absolute bottom-2.5 left-2.5 w-4 h-4 border-b-2 border-l-2 border-brand-amber" />
+              <div className="absolute bottom-2.5 right-2.5 w-4 h-4 border-b-2 border-r-2 border-brand-amber" />
+
+              <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-brand-orange text-white text-xs sm:text-sm font-black uppercase tracking-wider mb-2.5 shadow-md">
+                <QrCode className="w-4 h-4 text-white" />
+                <span>Scan with Phone to Spin</span>
+              </div>
+
+              {/* Crisp White QR Box */}
+              <div className="p-2.5 sm:p-3 bg-white rounded-2xl shadow-2xl border-2 border-brand-orange">
+                <QRCodeSVG
+                  value={registrationUrl || 'http://localhost:3000/register'}
+                  size={210}
+                  level="M"
+                  includeMargin={false}
+                />
+              </div>
+
+              {/* Clean URL Indicator */}
+              <div className="mt-2 flex items-center justify-center gap-1 text-[10px] sm:text-[11px] text-brand-amber font-mono font-bold tracking-tight">
+                {isEditingUrl ? (
+                  <div className="flex items-center gap-1 w-full max-w-[190px]">
+                    <input
+                      type="text"
+                      value={customUrlInput}
+                      onChange={(e) => setCustomUrlInput(e.target.value)}
+                      className="px-2 py-0.5 rounded bg-brand-dark border border-brand-amber text-[10px] text-white w-full outline-none"
+                    />
+                    <button
+                      onClick={handleSaveCustomUrl}
+                      className="p-1 rounded bg-brand-orange text-white"
+                      title="Apply URL"
+                    >
+                      <Check className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <Wifi className="w-3 h-3 text-brand-orange shrink-0" />
+                    <span className="truncate max-w-[175px]">{registrationUrl}</span>
+                    <button
+                      onClick={() => setIsEditingUrl(true)}
+                      className="text-slate-400 hover:text-white p-0.5"
+                      title="Edit URL"
+                    >
+                      <Edit2 className="w-3 h-3" />
+                    </button>
+                  </>
+                )}
+              </div>
+
+              <p className="text-[11px] sm:text-xs text-slate-100 mt-1.5 font-extrabold drop-shadow">
+                📱 Scan, Register & Spin on Your Phone!
+              </p>
+            </div>
+          </div>
+        </div>
       </main>
 
-      {/* ---------------- Bottom Ticker / Brand Footer: Compact Single Row ---------------- */}
+      {/* ---------------- Bottom Ticker / Brand Footer ---------------- */}
       <footer className="border-t border-brand-border/60 bg-brand-navy/95 py-1.5 px-4 sm:px-6 z-20 flex items-center justify-between gap-2 text-[10px] sm:text-[11px] text-slate-400 shrink-0">
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap text-[10px] sm:text-[11px]">
           <span className="flex items-center gap-1 text-slate-300 font-semibold">
@@ -560,16 +246,6 @@ export default function BoothKiosk({ socket }) {
           </a>
         </div>
       </footer>
-
-      {/* ---------------- Winner Celebration Modal ---------------- */}
-      {winnerModalData && (
-        <WinnerModal
-          winnerData={winnerModalData}
-          onNextStudent={handleNextStudent}
-          onClose={() => setWinnerModalData(null)}
-        />
-      )}
-
     </div>
   );
 }

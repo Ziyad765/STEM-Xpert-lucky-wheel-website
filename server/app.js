@@ -118,16 +118,40 @@ export function calculateTargetAngle(prizeIndex, totalSlices = 12) {
   return fullRotations + baseRotation;
 }
 
-export async function executeSpin(requestedBy = 'booth') {
+export async function executeSpin(requestedBy = 'mobile-phone', participantId = null, phone = null) {
   await ensureDB();
 
-  const active = await getActiveParticipant();
-  if (!active) {
-    return { success: false, message: 'No active student at the wheel. Waiting for registrations!' };
+  let targetParticipant = null;
+  if (participantId) {
+    targetParticipant = await getParticipantById(participantId);
+  }
+  if (!targetParticipant && phone) {
+    targetParticipant = await getParticipantById(phone);
+  }
+  if (!targetParticipant) {
+    targetParticipant = await getActiveParticipant();
   }
 
-  if (active.status === 'spinning' || Date.now() < spinLockUntil) {
-    return { success: false, message: 'Wheel is already spinning!' };
+  if (!targetParticipant) {
+    return { success: false, message: 'No registered student found. Please register first!' };
+  }
+
+  // If this participant already completed a spin and has a prize, return it cleanly
+  if (targetParticipant.status === 'completed' && targetParticipant.prizeWon) {
+    const prizes = await getPrizes();
+    const existingIndex = prizes.findIndex(p => p.id === targetParticipant.prizeWon?.id);
+    const safeExistingIndex = existingIndex >= 0 ? existingIndex : 0;
+    return {
+      success: true,
+      alreadySpun: true,
+      message: 'Prize already unlocked',
+      targetAngle: calculateTargetAngle(safeExistingIndex, prizes.length),
+      durationMs: 6500,
+      prize: targetParticipant.prizeWon,
+      prizeIndex: safeExistingIndex,
+      voucherCode: targetParticipant.voucherCode,
+      participant: targetParticipant
+    };
   }
 
   const prizes = await getPrizes();
@@ -136,77 +160,41 @@ export async function executeSpin(requestedBy = 'booth') {
   const safeIndex = prizeIndex >= 0 ? prizeIndex : 0;
 
   const targetAngle = calculateTargetAngle(safeIndex, prizes.length);
-  const durationMs = 7500; // 7.5 seconds for dramatic near-miss suspense
+  const durationMs = 6500; // 6.5 seconds dramatic spin on smartphone
 
-function getExactVoucherCode(prize) {
-  const name = (prize?.label || prize?.shortLabel || '').toLowerCase();
-  if (name.includes('virtual') || name.includes('robotics') || name.includes('lab')) return 'AILAB100';
-  if (name.includes('teacher') || name.includes('ait')) return 'DIDACAIT100';
-  if (name.includes('trainer') || name.includes('skill') || name.includes('facilitator')) return 'SF100';
-  return prize?.voucherCode || 'DIDAC100';
-}
+  function getExactVoucherCode(prize) {
+    const name = (prize?.label || prize?.shortLabel || '').toLowerCase();
+    if (name.includes('virtual') || name.includes('robotics') || name.includes('lab')) return 'AILAB100';
+    if (name.includes('teacher') || name.includes('ait')) return 'DIDACAIT100';
+    if (name.includes('trainer') || name.includes('skill') || name.includes('facilitator')) return 'SF100';
+    return prize?.voucherCode || 'DIDAC100';
+  }
 
   const voucherCode = getExactVoucherCode(winningPrize);
 
-  // Set spin lock
-  spinLockUntil = Date.now() + durationMs;
-  isSpinning = true;
-
-  // Synchronously update MongoDB so completion is guaranteed even if serverless freezes
+  // Synchronously update MongoDB so completion is guaranteed immediately
   await decrementPrizeStock(winningPrize.id);
   const updatedParticipant = await completeCurrentParticipant(
-    active._id,
+    targetParticipant._id,
     winningPrize,
-    voucherCode,
-    durationMs
+    voucherCode
   );
-
-  const completedData = {
-    participant: updatedParticipant || active,
-    prize: winningPrize,
-    voucherCode,
-    targetAngle,
-    durationMs,
-    prizeIndex: safeIndex,
-    requestedBy,
-    startedAt: Date.now()
-  };
-
-  currentSpinData = completedData;
 
   // Send winner email (safely bounded so serverless sends before lambda finishes)
   try {
     const emailResult = await Promise.race([
       sendWinnerEmail({
-        participant: updatedParticipant || active,
+        participant: updatedParticipant || targetParticipant,
         prize: winningPrize,
         voucherCode
       }),
-      new Promise(resolve => setTimeout(() => resolve({ success: false, reason: 'timeout' }), 3000))
+      new Promise(resolve => setTimeout(() => resolve({ success: false, reason: 'timeout' }), 1500))
     ]);
     if (emailResult?.success) {
-      await markEmailSent(active._id, true);
+      await markEmailSent(targetParticipant._id, true);
     }
   } catch (err) {
     console.error('Email send error:', err);
-  }
-
-  if (ioInstance) {
-    ioInstance.emit('spin:started', {
-      participant: active,
-      targetAngle,
-      durationMs,
-      prizeIndex: safeIndex
-    });
-    setTimeout(() => {
-      isSpinning = false;
-      ioInstance.emit('spin:completed', completedData);
-      broadcastQueueState();
-    }, durationMs);
-  } else {
-    setTimeout(() => {
-      isSpinning = false;
-    }, durationMs);
   }
 
   return { 
@@ -217,7 +205,7 @@ function getExactVoucherCode(prize) {
     prize: winningPrize,
     prizeIndex: safeIndex,
     voucherCode,
-    participant: updatedParticipant || active
+    participant: updatedParticipant || targetParticipant
   };
 }
 
@@ -311,9 +299,7 @@ app.post('/api/register', async (req, res) => {
     res.json({
       success: true,
       participant: result.participant,
-      message: result.participant.status === 'active'
-        ? 'You are up next! Watch the booth screen!'
-        : `Registered successfully! You are #${result.participant.queuePosition} in line.`
+      message: 'Registered successfully! Tap to spin the wheel on your phone!'
     });
   } catch (err) {
     console.error('Registration error:', err);
@@ -371,8 +357,8 @@ app.get('/api/prizes', async (req, res) => {
 app.post('/api/spin', async (req, res) => {
   await ensureDB();
   try {
-    const requestedBy = req.body.requestedBy || 'booth';
-    const result = await executeSpin(requestedBy);
+    const { requestedBy = 'mobile-phone', participantId = null, phone = null } = req.body || {};
+    const result = await executeSpin(requestedBy, participantId, phone);
     if (!result.success) {
       return res.status(400).json(result);
     }

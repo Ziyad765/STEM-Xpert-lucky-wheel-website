@@ -221,30 +221,30 @@ export async function findParticipantByPhoneOrEmail(phone, email, name = '') {
 }
 
 export async function registerParticipant(data) {
-  // First clean up any stale active students who never spun
-  await cleanupStaleActive(3);
-
   const cleanPhone = data.phone?.trim().replace(/\D/g, '');
   const cleanEmail = data.email?.trim().toLowerCase();
 
+  // If this person already has an unspun active/waiting registration, reuse it immediately
   const existing = await findParticipantByPhoneOrEmail(cleanPhone, cleanEmail, data.name);
   if (existing) {
+    if (existing.status === 'waiting') {
+      existing.status = 'active';
+      existing.queuePosition = 0;
+      existing.activatedAt = new Date();
+      if (isConnectedToMongo && existing.save) {
+        await existing.save();
+      } else {
+        saveLocalParticipants();
+      }
+    }
     return {
-      success: false,
-      alreadyExists: true,
+      success: true,
+      reused: true,
       participant: existing
     };
   }
 
-  // Check if someone is already active
-  const activePerson = await getActiveParticipant();
-  const currentQueue = await getWaitingQueue();
-  
-  // If NO ONE is active, this student immediately becomes 'active'
-  const shouldBeActive = !activePerson;
-  const status = shouldBeActive ? 'active' : 'waiting';
-  const queuePosition = shouldBeActive ? 0 : (currentQueue.length + 1);
-
+  // Standalone phone spin mode: every new registration is immediately active & ready to spin
   const newDoc = {
     name: data.name.trim(),
     phone: cleanPhone,
@@ -252,15 +252,15 @@ export async function registerParticipant(data) {
     school: data.school.trim(),
     grade: data.grade?.trim() || 'General',
     interest: data.interest?.trim() || 'Robotics & STEM',
-    status,
-    queuePosition,
+    status: 'active',
+    queuePosition: 0,
     prizeWon: null,
     voucherCode: null,
     spunAt: null,
     emailSent: false,
     emailSentAt: null,
     registeredAt: new Date(),
-    activatedAt: shouldBeActive ? new Date() : null
+    activatedAt: new Date()
   };
 
   if (!isConnectedToMongo) {
@@ -370,27 +370,24 @@ export async function popNextInQueue() {
   }
 }
 
-export async function completeCurrentParticipant(id, prize, voucherCode, durationMs = 7500) {
-  const spinEndsAt = new Date(Date.now() + durationMs);
+export async function completeCurrentParticipant(id, prize, voucherCode) {
   if (isConnectedToMongo && MongoParticipant) {
     const p = await MongoParticipant.findById(id);
     if (p) {
-      p.status = 'spinning';
+      p.status = 'completed';
       p.prizeWon = prize;
       p.voucherCode = voucherCode;
       p.spunAt = new Date();
-      p.spinEndsAt = spinEndsAt;
       await p.save();
       return p;
     }
   } else {
     const p = localParticipants.find(item => item._id === id);
     if (p) {
-      p.status = 'spinning';
+      p.status = 'completed';
       p.prizeWon = prize;
       p.voucherCode = voucherCode;
       p.spunAt = new Date();
-      p.spinEndsAt = spinEndsAt;
       saveLocalParticipants();
       return p;
     }

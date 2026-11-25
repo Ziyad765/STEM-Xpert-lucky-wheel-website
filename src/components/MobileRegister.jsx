@@ -1,36 +1,48 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import confetti from 'canvas-confetti';
 import {
   Sparkles,
-  CheckCircle,
-  Clock,
   AlertCircle,
-  Trophy,
   ArrowRight,
   ShieldCheck,
-  ExternalLink,
   RotateCcw,
-  UserPlus
+  UserPlus,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
+import SpinWheel from './SpinWheel';
+import { audio } from '../utils/audio';
 import { getExactVoucherCode } from '../utils/voucher';
+import { DEFAULT_PRIZES, pickWinningPrize, calculateTargetAngle } from '../utils/prizes';
 
-export default function MobileRegister({ socket }) {
+export default function MobileRegister() {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     email: '',
     school: '',
-    grade: 'Grade 6 - 8',
+    grade: 'Grade 6 - 8 (Middle School)',
     interest: 'Robotics & AI'
   });
 
+  const [prizes, setPrizes] = useState(DEFAULT_PRIZES);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [myRegistration, setMyRegistration] = useState(null);
-  const [queueInfo, setQueueInfo] = useState({ active: null, queue: [] });
-  const [isSpinningServer, setIsSpinningServer] = useState(false);
-  const [activating, setActivating] = useState(false);
 
-  // Restore previous registration from localStorage & verify live status with DB
+  // Local smartphone spin state
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [isPreparingSpin, setIsPreparingSpin] = useState(false);
+  const [targetAngle, setTargetAngle] = useState(0);
+  const [spinDuration, setSpinDuration] = useState(6500);
+  const [isMuted, setIsMuted] = useState(false);
+
+  const spinLockRef = useRef(false);
+  const pendingSpinResultRef = useRef(null);
+  const spinFinalizedRef = useRef(false);
+  const backupTimerRef = useRef(null);
+
+  // Restore saved session & optionally fetch latest prizes once
   useEffect(() => {
     try {
       const saved = localStorage.getItem('stem_xpert_didac_reg');
@@ -38,24 +50,12 @@ export default function MobileRegister({ socket }) {
         const parsed = JSON.parse(saved);
         setMyRegistration(parsed);
 
-        // Fetch live state from server
         const lookupKey = parsed._id || parsed.phone;
-        if (lookupKey) {
+        if (lookupKey && !String(lookupKey).startsWith('local_')) {
           fetch(`/api/participant/${encodeURIComponent(lookupKey)}`)
-            .then(res => {
-              if (res.status === 404) {
-                // Only wipe if not completed yet (don't lose won prize)
-                if (parsed.status !== 'completed') {
-                  localStorage.removeItem('stem_xpert_didac_reg');
-                  setMyRegistration(null);
-                }
-                return null;
-              }
-              return res.json();
-            })
-            .then(data => {
-              if (!data) return;
-              if (data.participant) {
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => {
+              if (data?.participant) {
                 if (data.participant.status === 'cancelled') {
                   localStorage.removeItem('stem_xpert_didac_reg');
                   setMyRegistration(null);
@@ -65,236 +65,206 @@ export default function MobileRegister({ socket }) {
                 }
               }
             })
-            .catch(() => { });
+            .catch(() => {});
         }
       }
-    } catch (e) { }
-  }, []);
+    } catch (e) {}
 
-  // Poll & Socket Queue Sync
-  useEffect(() => {
-    if (socket) {
-      socket.on('queue:init', (data) => {
-        setQueueInfo({ active: data.active, queue: data.queue || [] });
-        setIsSpinningServer(data.isSpinning || false);
-      });
-
-      socket.on('queue:update', (data) => {
-        setQueueInfo({ active: data.active, queue: data.queue || [] });
-        setIsSpinningServer(data.isSpinning || false);
-
-        if (myRegistration) {
-          const myId = myRegistration._id ? String(myRegistration._id) : null;
-          const activeId = data.active?._id ? String(data.active._id) : null;
-          const phoneMatch = data.active?.phone && data.active.phone === myRegistration.phone;
-
-          if (activeId === myId || phoneMatch) {
-            setMyRegistration(prev => ({ ...prev, status: 'active', queuePosition: 0 }));
-          } else {
-            const inQueue = (data.queue || []).find(q => (myId && String(q._id) === myId) || q.phone === myRegistration.phone);
-            if (inQueue) {
-              setMyRegistration(prev => ({ ...prev, status: 'waiting', queuePosition: inQueue.queuePosition }));
-            }
-          }
+    fetch('/api/prizes')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.prizes && data.prizes.length > 0) {
+          setPrizes(data.prizes);
         }
-      });
-
-      socket.on('spin:completed', (data) => {
-        const myId = myRegistration?._id ? String(myRegistration._id) : null;
-        const winnerId = data.participant?._id ? String(data.participant._id) : null;
-        const phoneMatch = data.participant?.phone && data.participant.phone === myRegistration?.phone;
-
-        if ((winnerId && winnerId === myId) || phoneMatch) {
-          const completedDoc = {
-            ...myRegistration,
-            ...data.participant,
-            status: 'completed',
-            prizeWon: data.prize,
-            voucherCode: data.voucherCode
-          };
-          setMyRegistration(completedDoc);
-          localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(completedDoc));
-          setIsSpinningServer(false);
-        }
-      });
-    }
-
-    // Fast 750ms polling fallback (syncs wheel & status reliably)
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch('/api/queue');
-        if (!res.ok) return;
-        const data = await res.json();
-
-        setQueueInfo({ active: data.active, queue: data.queue || [] });
-        setIsSpinningServer(data.isSpinning || false);
-
-        if (myRegistration) {
-          const myId = myRegistration._id ? String(myRegistration._id) : null;
-          const myPhone = myRegistration.phone;
-
-          // 1. Check if current/recent spin on booth screen was for ME
-          const spinDoc = data.currentSpinData || data.lastCompletedSpin;
-          const spinPerson = spinDoc?.participant;
-          if (spinPerson) {
-            const isMe =
-              (myId && String(spinPerson._id) === myId) ||
-              (myPhone && spinPerson.phone === myPhone) ||
-              (myRegistration.email && spinPerson.email?.toLowerCase() === myRegistration.email.toLowerCase());
-
-            if (isMe) {
-              const isStillSpinning = data.isSpinning || spinPerson.status === 'spinning' || (spinPerson.spinEndsAt && new Date() < new Date(spinPerson.spinEndsAt));
-              if (isStillSpinning) {
-                setIsSpinningServer(true);
-              } else {
-                // Spin completed! Reveal prize and WhatsApp claim immediately!
-                const completedDoc = {
-                  ...myRegistration,
-                  ...spinPerson,
-                  status: 'completed',
-                  prizeWon: spinDoc.prize || spinPerson.prizeWon,
-                  voucherCode: getExactVoucherCode(spinDoc.prize || spinPerson.prizeWon) || spinDoc.voucherCode || spinPerson.voucherCode
-                };
-                setMyRegistration(completedDoc);
-                localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(completedDoc));
-                setIsSpinningServer(false);
-                return;
-              }
-            }
-          }
-
-          // 2. Check active & waiting status
-          const activeId = data.active?._id ? String(data.active._id) : null;
-          const phoneMatch = data.active?.phone && data.active.phone === myPhone;
-
-          if ((myId && activeId === myId) || phoneMatch) {
-            const isSpinningNow = data.isSpinning || data.active.status === 'spinning' || (data.active.spinEndsAt && new Date() < new Date(data.active.spinEndsAt));
-            if (isSpinningNow) {
-              setIsSpinningServer(true);
-              setMyRegistration(prev => ({ ...prev, status: 'spinning' }));
-            } else if (data.active.status === 'completed' || data.active.prizeWon) {
-              const completedDoc = {
-                ...myRegistration,
-                ...data.active,
-                status: 'completed'
-              };
-              setMyRegistration(completedDoc);
-              localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(completedDoc));
-              setIsSpinningServer(false);
-            } else {
-              const updated = { ...myRegistration, ...(data.active || {}), status: 'active', queuePosition: 0 };
-              setMyRegistration(updated);
-              localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(updated));
-            }
-          } else {
-            const inQueue = (data.queue || []).find(q => (myId && String(q._id) === myId) || (myPhone && q.phone === myPhone));
-            if (inQueue) {
-              const updated = { ...myRegistration, ...inQueue, status: 'waiting', queuePosition: inQueue.queuePosition };
-              setMyRegistration(updated);
-              localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(updated));
-            } else if (myRegistration.status !== 'completed' || !myRegistration.prizeWon) {
-              // Check backend for completion status using ID or Phone
-              const lookupKey = myId || myPhone;
-              if (lookupKey) {
-                try {
-                  const pRes = await fetch(`/api/participant/${encodeURIComponent(lookupKey)}`);
-                  if (pRes.ok) {
-                    const pData = await pRes.json();
-                    if (pData.participant) {
-                      const isSpinningNow = pData.participant.status === 'spinning' || (pData.participant.spinEndsAt && new Date() < new Date(pData.participant.spinEndsAt));
-                      if (isSpinningNow) {
-                        setIsSpinningServer(true);
-                        setMyRegistration(prev => ({ ...prev, status: 'spinning' }));
-                      } else if (pData.participant.status === 'completed' || pData.participant.prizeWon) {
-                        const completedDoc = {
-                          ...myRegistration,
-                          ...pData.participant,
-                          status: 'completed'
-                        };
-                        setMyRegistration(completedDoc);
-                        localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(completedDoc));
-                        setIsSpinningServer(false);
-                      } else if (pData.participant.status === 'cancelled') {
-                        localStorage.removeItem('stem_xpert_didac_reg');
-                        setMyRegistration(null);
-                      }
-                    }
-                  }
-                } catch (e) { }
-              }
-            }
-          }
-        }
-      } catch (e) { }
-    }, 750);
+      })
+      .catch(() => {});
 
     return () => {
-      clearInterval(interval);
-      if (socket) {
-        socket.off('queue:init');
-        socket.off('queue:update');
-        socket.off('spin:completed');
-      }
+      if (backupTimerRef.current) clearTimeout(backupTimerRef.current);
     };
-  }, [socket, myRegistration]);
+  }, []);
 
   const handleChange = (e) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  // Register attendee (with resilient static fallback so expo visitors never get blocked)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4500);
+
       const res = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
+        signal: controller.signal
       });
-      const data = await res.json();
+      clearTimeout(timeoutId);
 
+      const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || 'Registration failed');
       }
 
-      setMyRegistration(data.participant);
-      localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(data.participant));
-
-      // If registered as waiting but no one is active, trigger immediate activation
-      if (data.participant.status === 'waiting') {
-        fetch('/api/queue/activate-me', { method: 'POST' }).catch(() => { });
-      }
+      const participant = {
+        ...data.participant,
+        status: data.participant?.status === 'completed' ? 'completed' : 'active'
+      };
+      setMyRegistration(participant);
+      localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(participant));
+      setLoading(false);
+      return;
     } catch (err) {
-      setError(err.message);
-    } finally {
+      // If user left required fields blank or server returned a 400 validation message, surface it
+      if (err.name !== 'AbortError' && err.message && err.message.includes('required')) {
+        setError(err.message);
+        setLoading(false);
+        return;
+      }
+      // Otherwise fall back seamlessly to local session so the attendee can still spin immediately
+      console.warn('Register fallback to static local mode:', err.message);
+      const localParticipant = {
+        _id: 'local_' + Date.now(),
+        name: formData.name.trim(),
+        phone: formData.phone.trim(),
+        email: formData.email.trim(),
+        school: formData.school.trim() || 'DIDAC Attendee',
+        grade: formData.grade,
+        interest: formData.interest,
+        status: 'active',
+        prizeWon: null,
+        voucherCode: null
+      };
+      setMyRegistration(localParticipant);
+      localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(localParticipant));
       setLoading(false);
     }
   };
 
-  // Student taps "Step Up to the Wheel" from their phone
-  const handleActivateTurn = async () => {
-    setActivating(true);
-    try {
-      const res = await fetch('/api/queue/activate-me', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: myRegistration?._id })
-      });
-      const data = await res.json();
-      if (data.active) {
-        setMyRegistration(prev => ({ ...prev, status: 'active', queuePosition: 0 }));
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setActivating(false);
+  // Finalize spin & launch celebration confetti on smartphone
+  const finalizeSmartphoneSpin = () => {
+    if (spinFinalizedRef.current) return;
+    spinFinalizedRef.current = true;
+    if (backupTimerRef.current) {
+      clearTimeout(backupTimerRef.current);
+      backupTimerRef.current = null;
     }
+
+    const result = pendingSpinResultRef.current;
+    setIsSpinning(false);
+    setIsPreparingSpin(false);
+    spinLockRef.current = false;
+
+    if (!result) return;
+
+    audio.playFanfare();
+    try {
+      confetti({
+        particleCount: 90,
+        spread: 90,
+        origin: { y: 0.6 },
+        colors: ['#FF4612', '#FBA94B', '#FFD700', '#2563EB', '#059669']
+      });
+    } catch (e) {}
+
+    setMyRegistration((prev) => {
+      const completedDoc = {
+        ...(prev || {}),
+        ...(result.participant || {}),
+        status: 'completed',
+        prizeWon: result.prize,
+        voucherCode: result.voucherCode || getExactVoucherCode(result.prize)
+      };
+      localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(completedDoc));
+      return completedDoc;
+    });
+    pendingSpinResultRef.current = null;
   };
 
-  // Clear session to register another student
+  // Trigger spin right inside the smartphone screen!
+  const handleSpinClick = async () => {
+    if (spinLockRef.current || isSpinning || isPreparingSpin || !myRegistration || myRegistration.status === 'completed') {
+      return;
+    }
+    spinLockRef.current = true;
+    setIsPreparingSpin(true);
+    spinFinalizedRef.current = false;
+    audio.init();
+
+    const beginWheelAnimation = (spinData) => {
+      pendingSpinResultRef.current = spinData;
+      const dur = spinData.durationMs || 6500;
+      setTargetAngle(spinData.targetAngle);
+      setSpinDuration(dur);
+      setIsPreparingSpin(false);
+      setIsSpinning(true);
+
+      // Backup timer ensures completion even if mobile browser pauses animation frame briefly
+      backupTimerRef.current = setTimeout(() => {
+        finalizeSmartphoneSpin();
+      }, dur + 400);
+    };
+
+    // Only hit backend if participant was created on server; otherwise instant local spin
+    const hasServerId = myRegistration._id && !String(myRegistration._id).startsWith('local_');
+    if (hasServerId) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+        const res = await fetch('/api/spin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            requestedBy: 'mobile-phone',
+            participantId: myRegistration._id,
+            phone: myRegistration.phone
+          }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        const data = await res.json();
+        if (data.success && data.prize) {
+          beginWheelAnimation({
+            prize: data.prize,
+            voucherCode: getExactVoucherCode(data.prize) || data.voucherCode,
+            targetAngle: data.targetAngle,
+            durationMs: data.durationMs || 6500,
+            participant: data.participant || myRegistration
+          });
+          return;
+        }
+      } catch (err) {
+        console.warn('Spin falling back to local static selection:', err.message);
+      }
+    }
+
+    // Instant client-side spin fallback
+    const localPrize = pickWinningPrize(prizes);
+    const idx = Math.max(0, prizes.findIndex((p) => p.id === localPrize.id));
+    const localAngle = calculateTargetAngle(idx, prizes.length);
+    beginWheelAnimation({
+      prize: localPrize,
+      voucherCode: getExactVoucherCode(localPrize),
+      targetAngle: localAngle,
+      durationMs: 6500,
+      participant: myRegistration
+    });
+  };
+
+  // Clear session to register another student / spin again
   const handleClearSession = () => {
+    if (backupTimerRef.current) clearTimeout(backupTimerRef.current);
+    spinLockRef.current = false;
+    pendingSpinResultRef.current = null;
+    setIsSpinning(false);
+    setIsPreparingSpin(false);
     localStorage.removeItem('stem_xpert_didac_reg');
     setMyRegistration(null);
     setFormData({
@@ -302,58 +272,15 @@ export default function MobileRegister({ socket }) {
       phone: '',
       email: '',
       school: '',
-      grade: 'Grade 6 - 8',
+      grade: 'Grade 6 - 8 (Middle School)',
       interest: 'Robotics & AI'
     });
   };
 
-  // Remote trigger spin
-  const handleRemoteSpin = async () => {
-    setIsSpinningServer(true);
-    try {
-      if (socket && socket.connected) {
-        socket.emit('spin:trigger', { requestedBy: 'mobile-phone', id: myRegistration?._id });
-      } else {
-        const res = await fetch('/api/spin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ requestedBy: 'mobile-phone' })
-        });
-        const data = await res.json();
-        if (data.success && data.prize) {
-          setTimeout(() => {
-            const completedDoc = {
-              ...myRegistration,
-              status: 'completed',
-              prizeWon: data.prize,
-              voucherCode: getExactVoucherCode(data.prize)
-            };
-            setMyRegistration(completedDoc);
-            localStorage.setItem('stem_xpert_didac_reg', JSON.stringify(completedDoc));
-            setIsSpinningServer(false);
-          }, 7500);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to trigger remote spin:', err);
-      setIsSpinningServer(false);
-    }
+  const handleToggleSound = () => {
+    const muted = audio.toggleMute();
+    setIsMuted(muted);
   };
-
-  // Check if it's my turn
-  const isMyTurn = myRegistration && (
-    myRegistration.status === 'active' ||
-    myRegistration.status === 'spinning' ||
-    (queueInfo.active && String(queueInfo.active._id) === String(myRegistration._id)) ||
-    (queueInfo.active?.phone && myRegistration.phone && queueInfo.active.phone === myRegistration.phone) ||
-    (queueInfo.active?.email && myRegistration.email && queueInfo.active.email.toLowerCase() === myRegistration.email.toLowerCase())
-  );
-
-  const isWheelCurrentlySpinning = Boolean(
-    isSpinningServer || 
-    myRegistration?.status === 'spinning' || 
-    (myRegistration?.spinEndsAt && new Date() < new Date(myRegistration.spinEndsAt))
-  );
 
   // WhatsApp Claim URL Generator
   const getWhatsAppClaimUrl = () => {
@@ -390,7 +317,14 @@ export default function MobileRegister({ socket }) {
           <img src="/didac-skills-logo.png" alt="DIDAC SKILLS" className="h-9 sm:h-11 object-contain drop-shadow brightness-110" />
         </div>
         <div className="flex items-center gap-2">
-          {myRegistration && (
+          <button
+            onClick={handleToggleSound}
+            className="p-1.5 rounded-lg bg-brand-card border border-brand-border text-slate-300 hover:text-white transition-colors"
+            title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
+          >
+            {isMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4 text-brand-amber" />}
+          </button>
+          {myRegistration && !isSpinning && (
             <button
               onClick={handleClearSession}
               className="px-2.5 py-1 rounded-lg bg-brand-card hover:bg-brand-border text-brand-amber hover:text-white border border-brand-amber/40 text-[11px] font-bold flex items-center gap-1 transition-all"
@@ -404,13 +338,13 @@ export default function MobileRegister({ socket }) {
       </header>
 
       {/* Main Content Area */}
-      <main className="max-w-md w-full mx-auto my-5 flex-1 flex flex-col justify-center">
+      <main className="max-w-md w-full mx-auto my-4 flex-1 flex flex-col justify-center">
 
-        {/* CASE 1: Student has won a scholarship prize */}
+        {/* CASE 1: Won a Scholarship Prize -> Voucher + Big WhatsApp Claim Button */}
         {myRegistration?.status === 'completed' && (
           <div className="bg-gradient-to-b from-brand-card via-brand-dark to-brand-navy border-2 border-brand-orange rounded-3xl p-5 sm:p-6 text-center shadow-2xl relative overflow-hidden animate-fadeIn">
 
-            {/* Header with Official Logos: STEM-Xpert & DIDAC SKILLS (Transparent PNGs) */}
+            {/* Header with Official Logos */}
             <div className="flex items-center justify-between border-b border-brand-border/60 pb-2.5 mb-3">
               <div className="flex items-center gap-2">
                 <img src="/logo.png" alt="STEM Xpert" className="h-8 sm:h-10 object-contain drop-shadow" />
@@ -470,7 +404,7 @@ export default function MobileRegister({ socket }) {
                 </div>
               )}
 
-              {/* Hexagon Voucher Code Box */}
+              {/* Voucher Code Box */}
               <div className="mt-3.5 pt-3 border-t border-brand-border/60 flex flex-col sm:flex-row items-center justify-between gap-1.5">
                 <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider">OFFICIAL VOUCHER CODE:</span>
                 <span className="font-mono text-base font-black text-brand-amber px-4 py-1 rounded-lg bg-brand-card border-2 border-brand-orange/60 tracking-widest shadow-sm">
@@ -507,129 +441,69 @@ export default function MobileRegister({ socket }) {
           </div>
         )}
 
-        {/* CASE 2: Registered and it is YOUR TURN (Active Player) */}
-        {myRegistration && myRegistration.status !== 'completed' && isMyTurn && (
-          <div className="space-y-3 animate-fadeIn">
-            {/* Massive Glowing Robot Screen Callout Banner */}
-            <div className="bg-gradient-to-b from-brand-orange/25 via-brand-card to-brand-navy border-2 border-brand-orange rounded-3xl p-5 text-center shadow-[0_0_50px_rgba(255,70,18,0.4)] relative overflow-hidden">
-
-              {/* Flashing Top Pulse Beacon */}
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border-2 border-emerald-400 text-emerald-300 text-xs font-black uppercase tracking-wider mb-2.5 shadow-md animate-pulse">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                <span>IT IS YOUR TURN RIGHT NOW!</span>
-              </div>
-
-              {/* Big Animated Robot + Pointing Hand + Wheel */}
-              <div className="text-4xl sm:text-5xl my-1.5 animate-bounce">
-                🤖 👈 🎡
-              </div>
-
-              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight uppercase">
-                {myRegistration.name}, STEP UP TO THE ROBOT SCREEN!
-              </h2>
-
-              {/* THE BIG PROMINENT ACTION CARD */}
-              <div className="my-3 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-brand-orange via-orange-500 to-brand-amber text-white font-black text-base sm:text-lg shadow-2xl border-2 border-white/60 animate-pulse tracking-wide">
-                👉 TAP THE ROBOT SCREEN WHEEL TO SPIN!
-              </div>
-
-              <p className="text-xs text-amber-100 font-bold max-w-xs mx-auto leading-relaxed">
-                Look straight at the robot / booth screen in front of you. Tap the center of the wheel on the screen to start your lucky spin!
-              </p>
+        {/* CASE 2: Registered -> Interactive Spin Wheel Right on Smartphone! */}
+        {myRegistration && myRegistration.status !== 'completed' && (
+          <div className="bg-gradient-to-b from-brand-card to-brand-navy border-2 border-brand-orange/70 rounded-3xl p-4 sm:p-5 text-center shadow-2xl animate-fadeIn flex flex-col items-center">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 text-[11px] font-black uppercase tracking-wider mb-2">
+              <Sparkles className="w-3.5 h-3.5 text-brand-amber animate-spin-slow" />
+              <span>Wheel Unlocked for {myRegistration.name}!</span>
             </div>
 
-            {/* When the wheel is spinning */}
-            {isWheelCurrentlySpinning ? (
-              <div className="w-full py-6 px-5 rounded-3xl bg-gradient-to-r from-brand-orange/30 via-orange-500/30 to-brand-amber/30 border-2 border-brand-orange text-center shadow-2xl animate-pulse">
-                <div className="text-4xl mb-2 animate-spin-slow inline-block">🎡</div>
-                <div className="text-lg font-black text-brand-amber uppercase tracking-wider">
-                  Wheel is Spinning Live on Robot Screen!
-                </div>
-                <p className="text-xs sm:text-sm text-white font-bold mt-1.5 leading-relaxed">
-                  👀 Look up at the screen! Your guaranteed scholarship prize is landing right now!
-                </p>
-                <div className="mt-3 text-[11px] text-amber-200/90 font-medium">
-                  ✨ Your winning ticket will appear here in seconds...
-                </div>
-              </div>
-            ) : (
-              /* Secondary option: Spin remotely from phone */
-              <div className="text-center pt-0.5">
-                <div className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1.5">
-                  — OR SPIN REMOTELY FROM YOUR PHONE —
-                </div>
-                <button
-                  onClick={handleRemoteSpin}
-                  className="w-full py-3.5 px-4 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-xl active:scale-95 bg-brand-card hover:bg-brand-border text-brand-amber hover:text-white border-2 border-brand-orange/50"
-                >
-                  <Sparkles className="w-4 h-4 text-brand-orange" />
-                  <span>TAP HERE TO SPIN FROM PHONE</span>
-                </button>
-              </div>
-            )}
-
-            <button
-              onClick={handleClearSession}
-              className="text-[11px] text-slate-400 hover:text-white flex items-center justify-center gap-1 mx-auto pt-1"
-            >
-              <RotateCcw className="w-3 h-3" />
-              <span>Cancel or Register Another Student</span>
-            </button>
-          </div>
-        )}
-
-        {/* CASE 3: Registered and in Waiting Queue */}
-        {myRegistration && myRegistration.status !== 'completed' && !isMyTurn && (
-          <div className="bg-gradient-to-b from-brand-card to-brand-navy border border-brand-border rounded-3xl p-6 text-center shadow-xl">
-            <div className="inline-flex p-3 rounded-full bg-brand-amber/20 border border-brand-amber/40 text-brand-amber mb-3">
-              <Clock className="w-7 h-7 animate-pulse" />
-            </div>
-
-            <h2 className="text-xl font-black text-white">
-              You are in Line, {myRegistration.name}!
+            <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">
+              {isSpinning ? 'Spinning for Your Prize...' : 'Tap the Wheel to Spin & Win!'}
             </h2>
-            <p className="text-xs text-slate-300 mt-1">
-              Please watch the booth screen.
+            <p className="text-[11px] text-slate-300 mt-0.5 mb-3">
+              Guaranteed 100% Free Course Scholarship!
             </p>
 
-            {/* Position Box */}
-            <div className="my-5 p-5 rounded-2xl bg-brand-dark border border-brand-border">
-              <div className="text-[11px] text-slate-400 uppercase tracking-widest font-semibold">
-                Your Queue Position
-              </div>
-              <div className="text-4xl font-black text-brand-amber my-1 font-mono">
-                #{myRegistration.queuePosition || 1}
-              </div>
-              <p className="text-[11px] text-slate-400">
-                {myRegistration.school}
-              </p>
+            {/* Full Interactive Spin Wheel on Smartphone */}
+            <div className="my-1 flex items-center justify-center w-full">
+              <SpinWheel
+                prizes={prizes}
+                isSpinning={isSpinning}
+                targetAngle={targetAngle}
+                duration={spinDuration}
+                canSpin={!isSpinning && !isPreparingSpin}
+                onSpinRequest={handleSpinClick}
+                onSpinEnd={finalizeSmartphoneSpin}
+                idleSpin={false}
+                sizeClass="w-[min(82vw,350px)] h-[min(82vw,350px)]"
+              />
             </div>
 
-            {/* Action button to immediately activate turn if ready */}
+            {/* Big Spin Button below the wheel */}
             <button
-              onClick={handleActivateTurn}
-              disabled={activating}
-              className="w-full py-4 px-4 rounded-2xl bg-gradient-to-r from-brand-orange via-orange-500 to-brand-amber hover:brightness-110 active:scale-95 text-white font-extrabold text-sm shadow-xl flex items-center justify-center gap-2 transition-all mb-3 animate-pulse"
+              onClick={handleSpinClick}
+              disabled={isSpinning || isPreparingSpin}
+              className={`w-full mt-4 py-3.5 px-5 rounded-2xl font-black text-sm sm:text-base tracking-wider uppercase transition-all flex items-center justify-center gap-2 shadow-xl active:scale-95 ${
+                isSpinning || isPreparingSpin
+                  ? 'bg-slate-700 text-slate-300 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-brand-orange via-orange-500 to-brand-amber text-white hover:brightness-110 border-2 border-white/40 animate-pulse'
+              }`}
             >
               <Sparkles className="w-4 h-4 text-amber-200" />
-              <span>{activating ? 'Activating Your Turn...' : "⚡ Ready to Spin? Step Up to Wheel!"}</span>
+              <span>
+                {isSpinning
+                  ? 'SPINNING WITH SUSPENSE...'
+                  : isPreparingSpin
+                  ? 'STARTING WHEEL...'
+                  : 'TAP TO SPIN & WIN!'}
+              </span>
             </button>
 
-            <div className="text-xs text-slate-400 bg-brand-dark/50 p-3 rounded-xl border border-brand-border/40">
-              💡 Tap above or watch the big screen — when your name is called, your spin button will unlock automatically!
-            </div>
-
-            <button
-              onClick={handleClearSession}
-              className="w-full mt-4 py-2 text-xs text-slate-400 hover:text-white flex items-center justify-center gap-1.5 transition-colors underline underline-offset-4"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Register Another Student / Clear</span>
-            </button>
+            {!isSpinning && !isPreparingSpin && (
+              <button
+                onClick={handleClearSession}
+                className="text-[11px] text-slate-400 hover:text-white flex items-center justify-center gap-1 mx-auto mt-3"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Register Another Student</span>
+              </button>
+            )}
           </div>
         )}
 
-        {/* CASE 4: New Student Registration Form */}
+        {/* CASE 3: New Student Registration Form */}
         {!myRegistration && (
           <div className="bg-gradient-to-b from-brand-card to-brand-navy border border-brand-border rounded-3xl p-6 shadow-xl">
             <div className="text-center mb-5">
@@ -641,7 +515,7 @@ export default function MobileRegister({ socket }) {
                 Register & Spin to Win
               </h2>
               <p className="text-xs text-brand-amber font-semibold mt-1">
-                Guaranteed Free Course or Virtual Lab Access!
+                Spin right on your phone for a Free Course Scholarship!
               </p>
             </div>
 
@@ -757,10 +631,10 @@ export default function MobileRegister({ socket }) {
                 className="w-full mt-4 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-brand-orange to-brand-amber hover:brightness-110 active:scale-95 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-brand-orange/30 transition-all"
               >
                 {loading ? (
-                  <span>Registering...</span>
+                  <span>Unlocking Wheel...</span>
                 ) : (
                   <>
-                    <span>Join Queue & Spin!</span>
+                    <span>Register & Unlock Wheel!</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
